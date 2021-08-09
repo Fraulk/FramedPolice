@@ -1,13 +1,17 @@
 import os
 import time
-import discord
+import datetime
+# import discord
+from discord.ext import commands
 from dotenv import load_dotenv
 
 load_dotenv()
 API_KEY = os.getenv("API_KEY")
-client = discord.Client()
+# bot = discord.bot()
+bot = commands.Bot(command_prefix='!')
 # 86400 : 24h
-DELAY = 20
+# 43200 : 12h
+DELAY = 86400
 LIMIT = 5
 OUT_CHANNEL_ID = 873627616064720896
 IN_CHANNEL_ID = 873627093840314401
@@ -20,53 +24,80 @@ class UserMessage:
         self.count = count
 
 
-messages = []
+usersMessages = []
 
-
-@client.event
-async def on_ready():
-    print(f"{client.user} logged in")
-
-
-@client.event
-async def on_message(message):
-    if message.channel.id != IN_CHANNEL_ID:
-        return
+async def checkMessage(message):
     userId = message.author.id
     print(message.created_at)
-    for msg in messages:
+    embeds = message.embeds
+    attachmentCount = message.attachments
+    DMChannel = await message.author.create_dm()
+    if len(attachmentCount) > 1:
+        await DMChannel.send(f"Please post your shots one by one.")
+        await message.delete()
+    if len(attachmentCount) == 0 and len(embeds) == 0:
+        print('came here')
+        return
+    #     await DMChannel.send(f"Please do not talk in this channel.")
+    #     await message.delete()
+    print("Attachment count:", len(attachmentCount))
+    print("Embeds count:", len(embeds))
+    for msg in usersMessages:
         if msg.id == userId:
             endTime = msg.time + DELAY
+            remainingTime = DELAY - (time.time() - msg.time)
             print("Current Time:", endTime)
             if time.time() <= endTime:
                 if msg.count >= LIMIT:
                     print("Deleted")
-                    await client.get_channel(id=OUT_CHANNEL_ID).send(
-                        f"Sorry {message.author.mention} but you can't post more than 5 shots per day. {message.created_at}",
-                    )
+                    await DMChannel.send(f"Sorry but you can't post more than **{LIMIT}** shots per day.\nThe next time you can post is **{datetime.datetime.fromtimestamp(round(endTime))}** so in **{datetime.timedelta(seconds=round(remainingTime))}**")
                     await message.delete()
             else:
                 msg.time = time.time()
                 msg.count = 0
             msg.count += 1
             print(
-                f"UserId:{msg.id} Time of first message:{msg.time} Number of messages:{msg.count}"
+                f"UserId:{msg.id} Time of first message:{msg.time} Number of messages:{msg.count} By: {message.author.name}\n---------------------------------------------------------------------------------------------------------------"
             )
             return
+    usersMessages.append(UserMessage(userId, time.time(), 1))
 
-    messages.append(UserMessage(userId, time.time(), 1))
+
+@bot.event
+async def on_ready():
+    print(f"{bot.user} logged in")
 
 
-@client.event
+@bot.event
+async def on_message(message):
+    await bot.process_commands(message)
+    if message.channel.id != IN_CHANNEL_ID:
+        return
+    await checkMessage(message)
+
+
+@bot.event
 async def on_message_delete(message):
     if message.channel.id != IN_CHANNEL_ID:
         return
     userId = message.author.id
-    for msg in messages:
+    for msg in usersMessages:
         if msg.id == userId:
             msg.count -= 1
 
+@bot.command(name='changeDelay', help='Change the delay after reaching the limit for posting shots')
+@commands.has_role('Founders Edition')
+async def changeDelay(ctx, arg):
+    global DELAY
+    DELAY = int(arg)
+    print("Delay has been changed to", arg)
 
-# TODO detect if attachment superior to one to prevent shots posted as one msg
-# TODO detect removed posts
-client.run(API_KEY)
+@bot.command(name='changeLimit', help='Change the limit for posting shots')
+@commands.has_role('Founders Edition')
+async def changeLimit(ctx, arg):
+    global LIMIT
+    LIMIT = int(arg)
+    print("Limit has been changed to", arg)
+
+
+bot.run(API_KEY)
