@@ -1,13 +1,11 @@
 import os
 import time
 import datetime
-# import discord
 from discord.ext import commands
 from dotenv import load_dotenv
 
 load_dotenv()
 API_KEY = os.getenv("API_KEY")
-# bot = discord.bot()
 bot = commands.Bot(command_prefix='!')
 # 86400 : 24h
 # 43200 : 12h
@@ -18,10 +16,11 @@ IN_CHANNEL_ID = 873627093840314401
 
 
 class UserMessage:
-    def __init__(self, id, time, count):
+    def __init__(self, id, time, count, reachedLimit):
         self.id = id
         self.time = time
         self.count = count
+        self.reachedLimit = reachedLimit
 
 
 usersMessages = []
@@ -50,6 +49,7 @@ async def checkMessage(message):
             if time.time() <= endTime:
                 if msg.count >= LIMIT:
                     print("Deleted")
+                    msg.reachedLimit = True
                     await DMChannel.send(f"Sorry but you can't post more than **{LIMIT}** shots per day.\nThe next time you can post is **{datetime.datetime.fromtimestamp(round(endTime))}** so in **{datetime.timedelta(seconds=round(remainingTime))}**")
                     await message.delete()
             else:
@@ -60,7 +60,7 @@ async def checkMessage(message):
                 f"UserId:{msg.id} Time of first message:{msg.time} Number of messages:{msg.count} By: {message.author.name}\n---------------------------------------------------------------------------------------------------------------"
             )
             return
-    usersMessages.append(UserMessage(userId, time.time(), 1))
+    usersMessages.append(UserMessage(userId, time.time(), 1, False))
 
 
 @bot.event
@@ -82,6 +82,7 @@ async def on_message_delete(message):
         return
     userId = message.author.id
     for msg in usersMessages:
+        if msg.reachedLimit: return
         if msg.id == userId:
             msg.count -= 1
 
@@ -99,5 +100,6 @@ async def changeLimit(ctx, arg):
     LIMIT = int(arg)
     print("Limit has been changed to", arg)
 
-
+# FIXME : when multiple person spamm shots, sometime the bot ignore the event/code and some shots bypass the limit, it may be caused by the fact that 
+# 1. 6th shot get deleted 2. on_message_delete event then decrease user count 3. bot can't keep up so the limit decrease without increasing first or smthng or some events are simply ignored
 bot.run(API_KEY)
