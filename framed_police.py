@@ -16,8 +16,9 @@ IN_CHANNEL_ID = 873627093840314401
 
 
 class UserMessage:
-    def __init__(self, id, time, count, reachedLimit):
+    def __init__(self, id, name, time, count, reachedLimit):
         self.id = id
+        self.name = name
         self.time = time
         self.count = count
         self.reachedLimit = reachedLimit
@@ -60,7 +61,7 @@ async def checkMessage(message):
                 f"UserId:{msg.id} Time of first message:{msg.time} Number of messages:{msg.count} By: {message.author.name}\n---------------------------------------------------------------------------------------------------------------"
             )
             return
-    usersMessages.append(UserMessage(userId, time.time(), 1, False))
+    usersMessages.append(UserMessage(userId, message.author.name + "#" + message.author.discriminator, time.time(), 1, False))
 
 
 @bot.event
@@ -99,6 +100,29 @@ async def changeLimit(ctx, arg):
     global LIMIT
     LIMIT = int(arg)
     print("Limit has been changed to", arg)
+
+@bot.command(name='currentValue', help='Shows the current values for DELAY and LIMIT')
+@commands.has_role('Founders Edition')
+async def currentValue(ctx):
+    await ctx.send(f"LIMIT = {LIMIT}\nDELAY = {DELAY}")
+
+@bot.command(name='dumpAll', help='Shows data about everybody')
+@commands.has_role('Founders Edition')
+async def currentValue(ctx):
+    result = ""
+    for msg in usersMessages:
+        remainingTime = DELAY - (time.time() - msg.time)
+        result += f"Name: {msg.name}, Time of first post: {datetime.datetime.fromtimestamp(round(msg.time))}, Remaining time: {datetime.timedelta(seconds=round(remainingTime))}, Shots posted(suppressed ones included): {msg.count}, Has reached the limit: {msg.reachedLimit}\n"
+    await ctx.send(result if len(result) > 0 else "No data yet")
+
+@bot.command(name='dumpMe', help='Shows data about you')
+async def currentValue(ctx):
+    result = ""
+    for msg in usersMessages:
+        if msg.id == ctx.author.id:
+            remainingTime = DELAY - (time.time() - msg.time)
+            result += f"Name: {msg.name}, Time of first post: {datetime.datetime.fromtimestamp(round(msg.time))}, Remaining time: {datetime.timedelta(seconds=round(remainingTime))}, Shots posted(suppressed ones included): {msg.count}, Has reached the limit: {msg.reachedLimit}\n"
+    await ctx.send(result if len(result) > 0 else "No data yet")
 
 # FIXME : when multiple person spamm shots, sometime the bot ignore the event/code and some shots bypass the limit, it may be caused by the fact that 
 # 1. 6th shot get deleted 2. on_message_delete event then decrease user count 3. bot can't keep up so the limit decrease without increasing first or smthng or some events are simply ignored
