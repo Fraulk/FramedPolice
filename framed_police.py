@@ -101,7 +101,7 @@ async def changeLimit(ctx, arg):
     global LIMIT
     LIMIT = int(arg)
     print("Limit has been changed to", arg)
-    await ctx.send(f"Limit has been changed to{arg}")
+    await ctx.send(f"Limit has been changed to {arg}")
 
 @bot.command(name='currentValue', help='Shows the current values for DELAY and LIMIT')
 @commands.has_role('Founders Edition')
