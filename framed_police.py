@@ -93,7 +93,7 @@ async def changeDelay(ctx, arg):
     global DELAY
     DELAY = int(arg)
     print("Delay has been changed to", arg)
-    await ctx.send("Delay has been changed to", arg)
+    await ctx.send(f"Delay has been changed to {arg}")
 
 @bot.command(name='changeLimit', help='Change the limit for posting shots')
 @commands.has_role('Founders Edition')
@@ -101,7 +101,7 @@ async def changeLimit(ctx, arg):
     global LIMIT
     LIMIT = int(arg)
     print("Limit has been changed to", arg)
-    await ctx.send("Limit has been changed to", arg)
+    await ctx.send(f"Limit has been changed to{arg}")
 
 @bot.command(name='currentValue', help='Shows the current values for DELAY and LIMIT')
 @commands.has_role('Founders Edition')
