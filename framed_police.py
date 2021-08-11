@@ -9,10 +9,12 @@ API_KEY = os.getenv("API_KEY")
 bot = commands.Bot(command_prefix='!')
 # 86400 : 24h
 # 43200 : 12h
-DELAY = 43200
+# Test channel : 873627093840314401
+# Framed channel : 549986930071175169
+DELAY = 86400
 LIMIT = 5
 OUT_CHANNEL_ID = 697797735381860463
-IN_CHANNEL_ID = 549986930071175169
+IN_CHANNEL_ID = 873627093840314401
 
 
 class UserMessage:
@@ -58,10 +60,11 @@ async def checkMessage(message):
                 msg.count = 0
             msg.count += 1
             print(
-                f"UserId:{msg.id} Time of first message: {msg.time} Number of messages: {msg.count} By: {message.author.name}\n---------------------------------------------------------------------------------------------------------------"
+                f"UserId:{msg.id} Time of first message: {msg.time} Number of messages: {msg.count} By: {msg.name}\n---------------------------------------------------------------------------------------------------------------"
             )
             return
     usersMessages.append(UserMessage(userId, message.author.name + "#" + message.author.discriminator, time.time(), 1, False))
+    print(f"UserId:{userId} Time of first message: {time.time()} Number of messages: {1} By: {message.author.name}#{message.author.discriminator}\n---------------------------------------------------------------------------------------------------------------")
 
 
 @bot.event
@@ -108,24 +111,35 @@ async def changeLimit(ctx, arg):
 async def currentValue(ctx):
     await ctx.send(f"LIMIT = {LIMIT}\nDELAY = {DELAY}")
 
-@bot.command(name='dumpAll', help='Shows data about everybody')
+@bot.command(name='dump', help='Shows data about everybody')
 @commands.has_role('Founders Edition')
-async def dumpAll(ctx):
+async def dump(ctx):
     result = ""
+    i = 0
     for msg in usersMessages:
+        i += 1
         remainingTime = DELAY - (time.time() - msg.time)
         remainingTime = remainingTime if remainingTime >= 0 else 0
-        result += f"Name: {msg.name}, Time of first post: {datetime.datetime.fromtimestamp(round(msg.time))}, Remaining time: {datetime.timedelta(seconds=round(remainingTime))}, Shots posted (suppressed ones included): {msg.count}, Has reached the limit: {msg.reachedLimit}\n"
+        msgCount = msg.count if remainingTime > 0 else 0
+        msg.reachedLimit = msg.reachedLimit if remainingTime > 0 else False
+        result += f"**{msg.name}**: Remaining time: **{datetime.timedelta(seconds=round(remainingTime))}**, Shots posted: **{msgCount}**, Has reached the limit: **{msg.reachedLimit}**\n"
+        if i % 15 == 0:
+            await ctx.send(result if len(result) > 0 else "No data yet")
+            result = ""
+        
     await ctx.send(result if len(result) > 0 else "No data yet")
 
-@bot.command(name='dumpMe', help='Shows data about you')
-async def dumpMe(ctx):
+@bot.command(name='check', help='Shows data about you')
+async def check(ctx):
     result = ""
     for msg in usersMessages:
         if msg.id == ctx.author.id:
             remainingTime = DELAY - (time.time() - msg.time)
             remainingTime = remainingTime if remainingTime >= 0 else 0
-            result += f"Name: {msg.name}, Time of first post: {datetime.datetime.fromtimestamp(round(msg.time))}, Remaining time: {datetime.timedelta(seconds=round(remainingTime))}, Shots posted (suppressed ones included): {msg.count}, Has reached the limit: {msg.reachedLimit}\n"
+            msgCount = msg.count if msg.count < LIMIT else LIMIT
+            msgCount = msgCount if remainingTime > 0 else 0
+            msg.reachedLimit = msg.reachedLimit if remainingTime > 0 else False
+            result += f"**{msg.name}**: Remaining time: **{datetime.timedelta(seconds=round(remainingTime))}**, Shots posted: **{msgCount}**, Has reached the limit: **{msg.reachedLimit}**\n"
     await ctx.send(result if len(result) > 0 else "No data yet")
 
 @bot.command(name='reset', help='Resets the count for a person, with his ID as parameter')
