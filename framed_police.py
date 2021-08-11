@@ -117,15 +117,16 @@ async def dump(ctx):
     result = ""
     i = 0
     for msg in usersMessages:
-        i += 1
-        remainingTime = DELAY - (time.time() - msg.time)
-        remainingTime = remainingTime if remainingTime >= 0 else 0
-        msgCount = msg.count if remainingTime > 0 else 0
-        msg.reachedLimit = msg.reachedLimit if remainingTime > 0 else False
-        result += f"**{msg.name}**: Remaining time: **{datetime.timedelta(seconds=round(remainingTime))}**, Shots posted: **{msgCount}**, Has reached the limit: **{msg.reachedLimit}**\n"
-        if i % 15 == 0:
-            await ctx.send(result if len(result) > 0 else "No data yet")
-            result = ""
+        if msg.count > 0:
+            i += 1
+            remainingTime = DELAY - (time.time() - msg.time)
+            remainingTime = remainingTime if remainingTime >= 0 else 0
+            msgCount = msg.count if remainingTime > 0 else 0
+            msg.reachedLimit = msg.reachedLimit if remainingTime > 0 else False
+            result += f"**{msg.name}**: Remaining time: **{datetime.timedelta(seconds=round(remainingTime))}**, Shots posted: **{msgCount}**, Has reached the limit: **{msg.reachedLimit}**\n"
+            if i % 15 == 0:
+                await ctx.send(result if len(result) > 0 else "No data yet")
+                result = ""
         
     await ctx.send(result if len(result) > 0 else "No data yet")
 
@@ -133,7 +134,7 @@ async def dump(ctx):
 async def check(ctx):
     result = ""
     for msg in usersMessages:
-        if msg.id == ctx.author.id:
+        if msg.id == ctx.author.id and msg.count > 0:
             remainingTime = DELAY - (time.time() - msg.time)
             remainingTime = remainingTime if remainingTime >= 0 else 0
             msgCount = msg.count if msg.count < LIMIT else LIMIT
