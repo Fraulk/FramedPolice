@@ -58,6 +58,7 @@ async def checkMessage(message):
             else:
                 msg.time = time.time()
                 msg.count = 0
+                msg.reachedLimit = False
             msg.count += 1
             print(
                 f"UserId:{msg.id} Time of first message: {msg.time} Number of messages: {msg.count} By: {msg.name}\n---------------------------------------------------------------------------------------------------------------"
