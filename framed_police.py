@@ -118,11 +118,11 @@ async def dump(ctx):
     result = ""
     i = 0
     for msg in usersMessages:
-        if msg.count > 0:
+        remainingTime = DELAY - (time.time() - msg.time)
+        msgCount = msg.count if remainingTime > 0 else 0
+        if msgCount > 0:
             i += 1
-            remainingTime = DELAY - (time.time() - msg.time)
             remainingTime = remainingTime if remainingTime >= 0 else 0
-            msgCount = msg.count if remainingTime > 0 else 0
             msg.reachedLimit = msg.reachedLimit if remainingTime > 0 else False
             result += f"**{msg.name}**: Remaining time: **{datetime.timedelta(seconds=round(remainingTime))}**, Shots posted: **{msgCount}**, Has reached the limit: **{msg.reachedLimit}**\n"
             if i % 15 == 0:
