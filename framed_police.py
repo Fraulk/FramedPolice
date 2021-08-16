@@ -98,7 +98,7 @@ async def on_message_delete(message):
             await save()
 
 @bot.command(name='changeDelay', help='Change the delay after reaching the limit for posting shots')
-@commands.has_role('Founders Edition')
+@commands.has_any_role(549988038516670506, 549988228737007638)
 async def changeDelay(ctx, arg):
     global DELAY
     DELAY = int(arg)
@@ -106,7 +106,7 @@ async def changeDelay(ctx, arg):
     await ctx.send(f"Delay has been changed to {arg}")
 
 @bot.command(name='changeLimit', help='Change the limit for posting shots')
-@commands.has_role('Founders Edition')
+@commands.has_any_role(549988038516670506, 549988228737007638)
 async def changeLimit(ctx, arg):
     global LIMIT
     LIMIT = int(arg)
@@ -114,12 +114,12 @@ async def changeLimit(ctx, arg):
     await ctx.send(f"Limit has been changed to {arg}")
 
 @bot.command(name='currentValue', help='Shows the current values for DELAY and LIMIT')
-@commands.has_role('Founders Edition')
+@commands.has_any_role(549988038516670506, 549988228737007638)
 async def currentValue(ctx):
     await ctx.send(f"LIMIT = {LIMIT}\nDELAY = {DELAY}")
 
 @bot.command(name='dump', help='Shows data about everybody')
-@commands.has_role('Founders Edition')
+@commands.has_any_role(549988038516670506, 549988228737007638)
 async def dump(ctx):
     result = ""
     i = 0
@@ -151,7 +151,7 @@ async def check(ctx):
     await ctx.send(result if len(result) > 0 else "No data yet")
 
 @bot.command(name='reset', help='Resets the count for a person, with his ID as parameter')
-@commands.has_role('Founders Edition')
+@commands.has_any_role(549988038516670506, 549988228737007638)
 async def reset(ctx, arg):
     curUser = ""
     response = ""
@@ -169,7 +169,7 @@ async def reset(ctx, arg):
     await ctx.send(response)
 
 @bot.command(name='resetAll', help='Resets the count for everyone')
-@commands.has_role('Founders Edition')
+@commands.has_any_role(549988038516670506, 549988228737007638)
 async def resetAll(ctx):
     global usersMessages
     for msg in usersMessages:
