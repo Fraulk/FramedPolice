@@ -1,6 +1,7 @@
 import os
 import time
 import datetime
+import pickle
 from discord.ext import commands
 from dotenv import load_dotenv
 
@@ -14,7 +15,7 @@ bot = commands.Bot(command_prefix='!')
 DELAY = 86400
 LIMIT = 5
 OUT_CHANNEL_ID = 697797735381860463
-IN_CHANNEL_ID = 549986930071175169
+IN_CHANNEL_ID = 873627093840314401
 
 
 class UserMessage:
@@ -66,7 +67,10 @@ async def checkMessage(message):
             return
     usersMessages.append(UserMessage(userId, message.author.name + "#" + message.author.discriminator, time.time(), 1, False))
     print(f"UserId:{userId} Time of first message: {time.time()} Number of messages: {1} By: {message.author.name}#{message.author.discriminator}\n---------------------------------------------------------------------------------------------------------------")
-
+    
+async def save():
+    with open('messages.pkl', 'wb') as f:
+        pickle.dump(usersMessages, f)
 
 @bot.event
 async def on_ready():
@@ -79,6 +83,7 @@ async def on_message(message):
     if message.channel.id != IN_CHANNEL_ID:
         return
     await checkMessage(message)
+    await save()
 
 
 @bot.event
@@ -90,6 +95,7 @@ async def on_message_delete(message):
         if msg.reachedLimit: return
         if msg.id == userId:
             msg.count -= 1
+            await save()
 
 @bot.command(name='changeDelay', help='Change the delay after reaching the limit for posting shots')
 @commands.has_role('Founders Edition')
@@ -117,19 +123,19 @@ async def currentValue(ctx):
 async def dump(ctx):
     result = ""
     i = 0
-    for msg in usersMessages:
+    sortedResult = sorted(usersMessages, key=lambda x: x.name, reverse=False)
+    for msg in sortedResult:
         remainingTime = DELAY - (time.time() - msg.time)
+        remainingTime = remainingTime if remainingTime >= 0 else 0
         msgCount = msg.count if remainingTime > 0 else 0
-        if msgCount > 0:
+        if msgCount > 0 and remainingTime >= 0:
             i += 1
-            remainingTime = remainingTime if remainingTime >= 0 else 0
-            msg.reachedLimit = msg.reachedLimit if remainingTime > 0 else False
-            result += f"**{msg.name}**: Remaining time: **{datetime.timedelta(seconds=round(remainingTime))}**, Shots posted: **{msgCount}**, Has reached the limit: **{msg.reachedLimit}**\n"
+            msgReachedLimit = msg.reachedLimit if remainingTime > 0 else False
+            result += f"**{msg.name}**: Remaining time: **{datetime.timedelta(seconds=round(remainingTime))}**, Shots posted: **{msgCount}**, Has reached the limit: **{msgReachedLimit}**\n"
             if i % 15 == 0:
                 await ctx.send(result if len(result) > 0 else "No data yet")
                 result = ""
-        
-    await ctx.send(result if len(result) > 0 else "No data yet")
+    await ctx.send(result if len(result) > 0 else "No data yet") # did i forgot to remove this ?
 
 @bot.command(name='check', help='Shows data about you')
 async def check(ctx):
@@ -140,21 +146,27 @@ async def check(ctx):
             remainingTime = remainingTime if remainingTime >= 0 else 0
             msgCount = msg.count if msg.count < LIMIT else LIMIT
             msgCount = msgCount if remainingTime > 0 else 0
-            msg.reachedLimit = msg.reachedLimit if remainingTime > 0 else False
-            result += f"**{msg.name}**: Remaining time: **{datetime.timedelta(seconds=round(remainingTime))}**, Shots posted: **{msgCount}**, Has reached the limit: **{msg.reachedLimit}**\n"
+            msgReachedLimit = msg.reachedLimit if remainingTime > 0 else False
+            result += f"**{msg.name}**: Remaining time: **{datetime.timedelta(seconds=round(remainingTime))}**, Shots posted: **{msgCount}**, Has reached the limit: **{msgReachedLimit}**\n"
     await ctx.send(result if len(result) > 0 else "No data yet")
 
 @bot.command(name='reset', help='Resets the count for a person, with his ID as parameter')
 @commands.has_role('Founders Edition')
 async def reset(ctx, arg):
     curUser = ""
+    response = ""
     global usersMessages
     for msg in usersMessages:
         if msg.id == int(arg):
             msg.count = 0
             msg.reachedLimit = False
             curUser = msg.name
-    await ctx.send(f"{curUser} has been reset")
+    if curUser == "":
+        response = "This user either don't exists or didn't posted anything yet"
+    else:
+        response = f"{curUser} has been reset"
+        await save()
+    await ctx.send(response)
 
 @bot.command(name='resetAll', help='Resets the count for everyone')
 @commands.has_role('Founders Edition')
@@ -163,9 +175,17 @@ async def resetAll(ctx):
     for msg in usersMessages:
         msg.count = 0
         msg.reachedLimit = False
+    await save()
     await ctx.send("Everyone has been reset")
 
 # FIXME : when multiple person spamm shots, sometime the bot ignore the event/code and some shots bypass the limit, it may be caused by the fact that 
 # 1. 6th shot get deleted 2. on_message_delete event then decrease user count 3. bot can't keep up so the limit decrease without increasing first or smthng or some events are simply ignored
 # embeds are sometimes ignored, so a 6th shot can also bypass
+
+if os.path.isfile('./messages.pkl'):
+    with open('messages.pkl', 'rb') as f:
+        usersMessages = pickle.load(f)
+else:
+    with open('messages.pkl', 'wb'): pass
+
 bot.run(API_KEY)
