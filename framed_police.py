@@ -100,6 +100,7 @@ async def on_message_delete(message):
 @bot.command(name='changeDelay', help='Change the delay after reaching the limit for posting shots')
 @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
 async def changeDelay(ctx, arg):
+    print(f"'changeDelay' command has been used by {ctx.author.name}{ctx.author.discriminator}")
     global DELAY
     DELAY = int(arg)
     print("Delay has been changed to", arg)
@@ -108,6 +109,7 @@ async def changeDelay(ctx, arg):
 @bot.command(name='changeLimit', help='Change the limit for posting shots')
 @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
 async def changeLimit(ctx, arg):
+    print(f"'changeLimit' command has been used by {ctx.author.name}{ctx.author.discriminator}")
     global LIMIT
     LIMIT = int(arg)
     print("Limit has been changed to", arg)
@@ -116,11 +118,13 @@ async def changeLimit(ctx, arg):
 @bot.command(name='currentValue', help='Shows the current values for DELAY and LIMIT')
 @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
 async def currentValue(ctx):
+    print(f"'currentValue' command has been used by {ctx.author.name}{ctx.author.discriminator}")
     await ctx.send(f"LIMIT = {LIMIT}\nDELAY = {DELAY}")
 
 @bot.command(name='dump', help='Shows data about everybody')
 @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
 async def dump(ctx):
+    print(f"'dump' command has been used by {ctx.author.name}{ctx.author.discriminator}")
     result = ""
     i = 0
     sortedResult = sorted(usersMessages, key=lambda x: x.name, reverse=False)
@@ -166,6 +170,7 @@ async def reset(ctx, arg):
     else:
         response = f"{curUser} has been reset"
         await save()
+    print(f"'reset' command has been used by {ctx.author.name}{ctx.author.discriminator}")
     await ctx.send(response)
 
 @bot.command(name='resetAll', help='Resets the count for everyone')
@@ -176,11 +181,13 @@ async def resetAll(ctx):
         msg.count = 0
         msg.reachedLimit = False
     await save()
+    print(f"'resetAll' command has been used by {ctx.author.name}{ctx.author.discriminator}")
     await ctx.send("Everyone has been reset")
 
 # FIXME : when multiple person spamm shots, sometime the bot ignore the event/code and some shots bypass the limit, it may be caused by the fact that 
 # 1. 6th shot get deleted 2. on_message_delete event then decrease user count 3. bot can't keep up so the limit decrease without increasing first or smthng or some events are simply ignored
 # embeds are sometimes ignored, so a 6th shot can also bypass
+# FIXME : in theory, if someone remove an old message, it's still gonna reduce the counter, so it should prevent this if it's earlier than msg.time
 
 if os.path.isfile('./messages.pkl'):
     with open('messages.pkl', 'rb') as f:
