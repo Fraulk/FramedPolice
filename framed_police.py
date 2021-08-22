@@ -8,14 +8,15 @@ from dotenv import load_dotenv
 load_dotenv()
 API_KEY = os.getenv("API_KEY")
 bot = commands.Bot(command_prefix='!')
+PROD = True
 # 86400 : 24h
 # 43200 : 12h
 # Test channel : 873627093840314401
 # Framed channel : 549986930071175169
 DELAY = 86400
 LIMIT = 5
-OUT_CHANNEL_ID = 697797735381860463
-IN_CHANNEL_ID = 549986930071175169
+# OUT_CHANNEL_ID = 697797735381860463
+IN_CHANNEL_ID = 549986930071175169 if PROD else 873627093840314401
 
 
 class UserMessage:
@@ -89,6 +90,8 @@ async def on_message(message):
 @bot.event
 async def on_message_delete(message):
     if message.channel.id != IN_CHANNEL_ID:
+        return
+    if len(message.attachments) == 0:
         return
     userId = message.author.id
     for msg in usersMessages:
