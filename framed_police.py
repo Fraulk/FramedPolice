@@ -2,8 +2,10 @@ import os
 import time
 import datetime
 import pickle
+import requests
 from discord.ext import commands
 from dotenv import load_dotenv
+import discord
 
 load_dotenv()
 API_KEY = os.getenv("API_KEY")
@@ -124,6 +126,26 @@ async def currentValue(ctx):
     print(f"'currentValue' command has been used by {ctx.author.name}{ctx.author.discriminator}")
     await ctx.send(f"LIMIT = {LIMIT}\nDELAY = {DELAY}")
 
+@bot.command(name='dumpR', help='Shows data about those who reached the limit and have been dm\'d by the bot')
+@commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
+async def dumpR(ctx):
+    print(f"'dumpR' command has been used by {ctx.author.name}{ctx.author.discriminator}")
+    result = ""
+    i = 0
+    sortedResult = sorted(usersMessages, key=lambda x: x.name, reverse=False)
+    for msg in sortedResult:
+        remainingTime = DELAY - (time.time() - msg.time)
+        remainingTime = remainingTime if remainingTime >= 0 else 0
+        msgCount = msg.count if remainingTime > 0 else 0
+        if msgCount > LIMIT and remainingTime >= 0:
+            i += 1
+            msgReachedLimit = msg.reachedLimit if remainingTime > 0 else False
+            result += f"**{msg.name}**: Remaining time: **{datetime.timedelta(seconds=round(remainingTime))}**, Shots posted: **{msgCount}**, Has reached the limit: **{msgReachedLimit}**\n"
+            if i % 15 == 0:
+                await ctx.send(result if len(result) > 0 else "No data yet")
+                result = ""
+    await ctx.send(result if len(result) > 0 else "No data yet") # did i forgot to remove this ?
+
 @bot.command(name='dump', help='Shows data about everybody')
 @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
 async def dump(ctx):
@@ -187,10 +209,28 @@ async def resetAll(ctx):
     print(f"'resetAll' command has been used by {ctx.author.name}{ctx.author.discriminator}")
     await ctx.send("Everyone has been reset")
 
+@bot.command(name='cam', help='Search for a freecams or a tool by string. ex: !cam cyberpunk')
+async def cam(ctx, arg):
+    response = requests.get('https://docs.google.com/spreadsheet/ccc?key=1lnM2SM_RBzqile870zG70E39wuuseqQE0AaPW-P1p5E&output=csv')
+    assert response.status_code == 200, 'Wrong status code'
+    spreadData = str(response.content)
+    matched_lines = [line for line in spreadData.split('\\n') if str(arg).lower() in line.lower()]
+    data = ''
+    for item in matched_lines:
+        data += item.split(',')[0] + " : " + item.split(',')[1] + "\n" if matched_lines != [] else "Not found"
+    e = discord.Embed(title="Freecams, tools and stuff",
+                      url="https://docs.google.com/spreadsheets/d/1lnM2SM_RBzqile870zG70E39wuuseqQE0AaPW-P1p5E/edit#gid=0",
+                      description="Based on originalnicodr spreadsheet")
+    e.set_thumbnail(url="https://cdn.discordapp.com/avatars/128245457141891072/0ab765d7c5bd8fb373dbd3627796aeec.png?size=128")
+    await ctx.send(content=data, embed=e)
+
 # FIXME : when multiple person spamm shots, sometime the bot ignore the event/code and some shots bypass the limit, it may be caused by the fact that 
 # 1. 6th shot get deleted 2. on_message_delete event then decrease user count 3. bot can't keep up so the limit decrease without increasing first or smthng or some events are simply ignored
 # embeds are sometimes ignored, so a 6th shot can also bypass
 # FIXME : in theory, if someone remove an old message, it's still gonna reduce the counter, so it should prevent this if it's earlier than msg.time
+# TODO : also jim said it wasn't necessary but since you said you're bored maybe a counter of shots in share-your-shot and hall-of-framed then every weekend it posts a summary of the week's numbers or something
+# https://stackoverflow.com/questions/65765951/discord-python-counting-messages-from-a-week-and-save-them
+# TODO : !guide, gives you link to framed guide
 
 if os.path.isfile('./messages.pkl'):
     with open('messages.pkl', 'rb') as f:
