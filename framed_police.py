@@ -211,17 +211,18 @@ async def resetAll(ctx):
 
 @bot.command(name='cam', help='Search for a freecams or a tool by string. ex: !cam cyberpunk')
 async def cam(ctx, arg):
-    response = requests.get('https://docs.google.com/spreadsheet/ccc?key=1lnM2SM_RBzqile870zG70E39wuuseqQE0AaPW-P1p5E&output=csv')
-    assert response.status_code == 200, 'Wrong status code'
-    spreadData = str(response.content)
-    matched_lines = [line for line in spreadData.split('\\n') if str(arg).lower() in line.lower()]
-    data = ''
-    for item in matched_lines:
-        data += item.split(',')[0] + " : " + item.split(',')[1] + "\n" if matched_lines != [] else "Not found"
-    e = discord.Embed(title="Freecams, tools and stuff",
-                      url="https://docs.google.com/spreadsheets/d/1lnM2SM_RBzqile870zG70E39wuuseqQE0AaPW-P1p5E/edit#gid=0",
-                      description="Based on originalnicodr spreadsheet")
-    e.set_thumbnail(url="https://cdn.discordapp.com/avatars/128245457141891072/0ab765d7c5bd8fb373dbd3627796aeec.png?size=128")
+    async with ctx.typing():
+        response = requests.get('https://docs.google.com/spreadsheet/ccc?key=1lnM2SM_RBzqile870zG70E39wuuseqQE0AaPW-P1p5E&output=csv')
+        assert response.status_code == 200, 'Wrong status code'
+        spreadData = str(response.content)
+        matched_lines = [line for line in spreadData.split('\\n') if str(arg).lower() in line.lower()]
+        data = ''
+        for item in matched_lines:
+            data += item.split(',')[0] + " : " + item.split(',')[1] + "\n" if matched_lines != [] else "Not found"
+        e = discord.Embed(title="Freecams, tools and stuff",
+                          url="https://docs.google.com/spreadsheets/d/1lnM2SM_RBzqile870zG70E39wuuseqQE0AaPW-P1p5E/edit#gid=0",
+                          description="Based on originalnicodr spreadsheet")
+        e.set_thumbnail(url="https://cdn.discordapp.com/avatars/128245457141891072/0ab765d7c5bd8fb373dbd3627796aeec.png?size=128")
     await ctx.send(content=data, embed=e)
 
 # FIXME : when multiple person spamm shots, sometime the bot ignore the event/code and some shots bypass the limit, it may be caused by the fact that 
