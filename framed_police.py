@@ -16,7 +16,7 @@ PROD = True
 # Test channel : 873627093840314401
 # Framed channel : 549986930071175169
 DELAY = 86400
-LIMIT = 5
+LIMIT = 8
 # OUT_CHANNEL_ID = 697797735381860463
 IN_CHANNEL_ID = 549986930071175169 if PROD else 873627093840314401
 
@@ -70,7 +70,7 @@ async def checkMessage(message):
             return
     usersMessages.append(UserMessage(userId, message.author.name + "#" + message.author.discriminator, time.time(), 1, False))
     print(f"UserId:{userId} Time of first message: {time.time()} Number of messages: {1} By: {message.author.name}#{message.author.discriminator}\n---------------------------------------------------------------------------------------------------------------")
-    
+
 async def save():
     with open('messages.pkl', 'wb') as f:
         pickle.dump(usersMessages, f)
@@ -78,7 +78,6 @@ async def save():
 @bot.event
 async def on_ready():
     print(f"{bot.user} logged in")
-
 
 @bot.event
 async def on_message(message):
@@ -88,7 +87,6 @@ async def on_message(message):
     await checkMessage(message)
     await save()
 
-
 @bot.event
 async def on_message_delete(message):
     if message.channel.id != IN_CHANNEL_ID:
@@ -97,10 +95,14 @@ async def on_message_delete(message):
         return
     userId = message.author.id
     for msg in usersMessages:
-        if msg.reachedLimit: return
+        if msg.count <= LIMIT: return
         if msg.id == userId:
-            msg.count -= 1
-            await save()
+            msgCreatedAt = datetime.datetime.timestamp(message.created_at)
+            if msgCreatedAt >= msg.time - (3600 * 2):   # msgCreatedAt is in UTC, but msg.time is in my timezone, so I remove 2 hours to get it to UTC, approximatively
+                msg.count -= 1
+                await save()
+            else:
+                print('---------------------------------------- Older shots from '+ message.author.name + "#" + message.author.discriminator +' deleted')
 
 @bot.command(name='changeDelay', help='Change the delay after reaching the limit for posting shots')
 @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
@@ -225,7 +227,7 @@ async def cam(ctx, arg):
         e.set_thumbnail(url="https://cdn.discordapp.com/avatars/128245457141891072/0ab765d7c5bd8fb373dbd3627796aeec.png?size=128")
     await ctx.send(content=data, embed=e)
 
-# FIXME : when multiple person spamm shots, sometime the bot ignore the event/code and some shots bypass the limit, it may be caused by the fact that 
+# BUG : when multiple person spamm shots, sometime the bot ignore the event/code and some shots bypass the limit, it may be caused by the fact that 
 # 1. 6th shot get deleted 2. on_message_delete event then decrease user count 3. bot can't keep up so the limit decrease without increasing first or smthng or some events are simply ignored
 # embeds are sometimes ignored, so a 6th shot can also bypass
 # FIXME : in theory, if someone remove an old message, it's still gonna reduce the counter, so it should prevent this if it's earlier than msg.time
