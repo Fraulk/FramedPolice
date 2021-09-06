@@ -216,8 +216,18 @@ async def cam(ctx, arg):
     async with ctx.typing():
         response = requests.get('https://docs.google.com/spreadsheet/ccc?key=1lnM2SM_RBzqile870zG70E39wuuseqQE0AaPW-P1p5E&output=csv')
         assert response.status_code == 200, 'Wrong status code'
-        spreadData = str(response.content)
-        matched_lines = [line for line in spreadData.split('\\n') if str(arg).lower() in line.lower()]
+        spreadData = str(response.content).split('\\n')
+        matched_lines = []
+        line_index = 0
+        for line in spreadData:
+            if str(arg).lower() in line.lower():
+                next_index = 1
+                matched_lines += [line]
+                while spreadData[line_index + next_index].split(',')[0] == '' or spreadData[line_index + next_index].split(',')[0].startswith('http'): # if next line don't have a title or starts with http
+                    if not str(arg) in spreadData[line_index + next_index].lower(): # if it doesn't already contain the searched word to avoid duplicate
+                        matched_lines += [spreadData[line_index + next_index]]
+                    next_index += 1
+            line_index += 1
         data = ''
         for item in matched_lines:
             data += item.split(',')[0] + " : " + item.split(',')[1] + "\n" if matched_lines != [] else "Not found"
@@ -230,7 +240,6 @@ async def cam(ctx, arg):
 # BUG : when multiple person spamm shots, sometime the bot ignore the event/code and some shots bypass the limit, it may be caused by the fact that 
 # 1. 6th shot get deleted 2. on_message_delete event then decrease user count 3. bot can't keep up so the limit decrease without increasing first or smthng or some events are simply ignored
 # embeds are sometimes ignored, so a 6th shot can also bypass
-# FIXME : in theory, if someone remove an old message, it's still gonna reduce the counter, so it should prevent this if it's earlier than msg.time
 # TODO : also jim said it wasn't necessary but since you said you're bored maybe a counter of shots in share-your-shot and hall-of-framed then every weekend it posts a summary of the week's numbers or something
 # https://stackoverflow.com/questions/65765951/discord-python-counting-messages-from-a-week-and-save-them
 # TODO : !guide, gives you link to framed guide
