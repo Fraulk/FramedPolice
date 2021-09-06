@@ -221,9 +221,10 @@ async def cam(ctx, arg):
         matched_lines = []
         line_index = 0
         for line in spreadData:
-            if str("abzu").lower() in line.lower().split(',')[0]:
+            if str(arg).lower() in line.lower().split(',')[0]:
                 next_index = 1
-                matched_lines += [line]
+                if line.find(',') > -1:
+                    matched_lines += [line]
                 if(spreadData[line_index + next_index] == ''): next_index += 1
                 while (line_index + next_index < len(spreadData) 
                         and spreadData[line_index + next_index].split(',')[0] == ''):
