@@ -211,25 +211,32 @@ async def resetAll(ctx):
     print(f"'resetAll' command has been used by {ctx.author.name}{ctx.author.discriminator}")
     await ctx.send("Everyone has been reset")
 
-@bot.command(name='cam', help='Search for a freecams or a tool by string. ex: !cam cyberpunk')
+@bot.command(name='cam', help='Search for a freecams or a tool by string (quoted if there\'s spaces). ex: !cam "cyberpunk 2077"')
 async def cam(ctx, arg):
     async with ctx.typing():
         response = requests.get('https://docs.google.com/spreadsheet/ccc?key=1lnM2SM_RBzqile870zG70E39wuuseqQE0AaPW-P1p5E&output=csv')
         assert response.status_code == 200, 'Wrong status code'
-        spreadData = str(response.content).split('\\n')
+        spreadData = str(response.content).split('\\r\\n')
+        spreadData.pop(0)
         matched_lines = []
         line_index = 0
         for line in spreadData:
-            if str(arg).lower() in line.lower():
+            if str("abzu").lower() in line.lower().split(',')[0]:
                 next_index = 1
                 matched_lines += [line]
-                while spreadData[line_index + next_index].split(',')[0] == '' and spreadData[line_index + next_index].split(',')[1].startswith('http'): # if next line don't have a title or starts with http
-                    if not str(arg) in spreadData[line_index + next_index].lower(): # if it doesn't already contain the searched word to avoid duplicate
+                if(spreadData[line_index + next_index] == ''): next_index += 1
+                while (line_index + next_index < len(spreadData) 
+                        and spreadData[line_index + next_index].split(',')[0] == ''):
+                    if spreadData[line_index + next_index].split(',')[1].startswith('http'):
                         matched_lines += [spreadData[line_index + next_index]]
                     next_index += 1
             line_index += 1
         data = ''
         for item in matched_lines:
+            if item.split(',')[1].startswith('"'):
+                for el in item.split(',')[1].strip('"').split('\\n'):
+                    data += item.split(',')[0] + " : " + el + "\n"
+                continue
             data += item.split(',')[0] + " : " + item.split(',')[1] + "\n" if matched_lines != [] else "Not found"
         e = discord.Embed(title="Freecams, tools and stuff",
                           url="https://docs.google.com/spreadsheets/d/1lnM2SM_RBzqile870zG70E39wuuseqQE0AaPW-P1p5E/edit#gid=0",
