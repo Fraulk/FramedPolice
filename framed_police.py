@@ -223,7 +223,7 @@ async def cam(ctx, arg):
             if str(arg).lower() in line.lower():
                 next_index = 1
                 matched_lines += [line]
-                while spreadData[line_index + next_index].split(',')[0] == '' or spreadData[line_index + next_index].split(',')[0].startswith('http'): # if next line don't have a title or starts with http
+                while spreadData[line_index + next_index].split(',')[0] == '' and spreadData[line_index + next_index].split(',')[1].startswith('http'): # if next line don't have a title or starts with http
                     if not str(arg) in spreadData[line_index + next_index].lower(): # if it doesn't already contain the searched word to avoid duplicate
                         matched_lines += [spreadData[line_index + next_index]]
                     next_index += 1
