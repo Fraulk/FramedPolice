@@ -15,8 +15,8 @@ PROD = True
 # 43200 : 12h
 # Test channel : 873627093840314401
 # Framed channel : 549986930071175169
-DELAY = 86400
-LIMIT = 8
+DELAY = 43200
+LIMIT = 5
 # OUT_CHANNEL_ID = 697797735381860463
 IN_CHANNEL_ID = 549986930071175169 if PROD else 873627093840314401
 
@@ -95,7 +95,7 @@ async def on_message_delete(message):
         return
     userId = message.author.id
     for msg in usersMessages:
-        if msg.count <= LIMIT: return
+        # if msg.count <= LIMIT: return
         if msg.id == userId:
             msgCreatedAt = datetime.datetime.timestamp(message.created_at)
             if msgCreatedAt >= msg.time - (3600 * 2):   # msgCreatedAt is in UTC, but msg.time is in my timezone, so I remove 2 hours to get it to UTC, approximatively
@@ -104,7 +104,7 @@ async def on_message_delete(message):
             else:
                 print('---------------------------------------- Older shots from '+ message.author.name + "#" + message.author.discriminator +' deleted')
 
-@bot.command(name='changeDelay', help='Change the delay after reaching the limit for posting shots')
+@bot.command(name='changeDelay', help='Change the delay after reaching the limit for posting shots, with number of seconds')
 @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
 async def changeDelay(ctx, arg):
     print(f"'changeDelay' command has been used by {ctx.author.name}{ctx.author.discriminator}")
@@ -251,6 +251,7 @@ async def cam(ctx, arg):
 # TODO : also jim said it wasn't necessary but since you said you're bored maybe a counter of shots in share-your-shot and hall-of-framed then every weekend it posts a summary of the week's numbers or something
 # https://stackoverflow.com/questions/65765951/discord-python-counting-messages-from-a-week-and-save-them
 # TODO : !guide, gives you link to framed guide
+# FIXME : reached limit msg is False in !dump even tho the msgCount == limit
 
 if os.path.isfile('./messages.pkl'):
     with open('messages.pkl', 'rb') as f:
