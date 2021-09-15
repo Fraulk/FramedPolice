@@ -97,12 +97,13 @@ async def on_message_delete(message):
     for msg in usersMessages:
         # if msg.count <= LIMIT: return
         if msg.id == userId:
-            msgCreatedAt = datetime.datetime.timestamp(message.created_at)
-            if msgCreatedAt >= msg.time - (3600 * 2):   # msgCreatedAt is in UTC, but msg.time is in my timezone, so I remove 2 hours to get it to UTC, approximatively
-                msg.count -= 1
-                await save()
-            else:
-                print('---------------------------------------- Older shots from '+ message.author.name + "#" + message.author.discriminator +' deleted')
+            # msgCreatedAt = datetime.datetime.timestamp(message.created_at)
+            # if msgCreatedAt >= msg.time - (3600 * 2):   # msgCreatedAt is in UTC, but msg.time is in my timezone, so I remove 2 hours to get it to UTC, approximatively
+            msg.count -= 1
+            print('---------------------------------------- Shots from '+ message.author.name + "#" + message.author.discriminator +' deleted')
+            await save()
+            # else:
+                # print('---------------------------------------- Older shots from '+ message.author.name + "#" + message.author.discriminator +' deleted')
 
 @bot.command(name='changeDelay', help='Change the delay after reaching the limit for posting shots, with number of seconds')
 @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
@@ -252,6 +253,7 @@ async def cam(ctx, arg):
 # https://stackoverflow.com/questions/65765951/discord-python-counting-messages-from-a-week-and-save-them
 # TODO : !guide, gives you link to framed guide
 # FIXME : reached limit msg is False in !dump even tho the msgCount == limit
+# FIXME : "older shot" triggered false positive, f
 
 if os.path.isfile('./messages.pkl'):
     with open('messages.pkl', 'rb') as f:
