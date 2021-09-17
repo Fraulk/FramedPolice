@@ -140,7 +140,7 @@ async def dumpR(ctx):
         remainingTime = DELAY - (time.time() - msg.time)
         remainingTime = remainingTime if remainingTime >= 0 else 0
         msgCount = msg.count if remainingTime > 0 else 0
-        if msgCount > LIMIT and remainingTime >= 0:
+        if msgCount >= LIMIT and remainingTime >= 0:
             i += 1
             msgReachedLimit = msg.reachedLimit if remainingTime > 0 else False
             result += f"**{msg.name}**: Remaining time: **{datetime.timedelta(seconds=round(remainingTime))}**, Shots posted: **{msgCount}**, Has reached the limit: **{msgReachedLimit}**\n"
