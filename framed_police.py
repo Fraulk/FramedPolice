@@ -213,16 +213,18 @@ async def resetAll(ctx):
     await ctx.send("Everyone has been reset")
 
 @bot.command(name='cam', help='Search for a freecams or a tool by string (quoted if there\'s spaces). ex: !cam "cyberpunk 2077"')
-async def cam(ctx, arg):
+async def cam(ctx, *args):
     async with ctx.typing():
         response = requests.get('https://docs.google.com/spreadsheet/ccc?key=1lnM2SM_RBzqile870zG70E39wuuseqQE0AaPW-P1p5E&output=csv')
         assert response.status_code == 200, 'Wrong status code'
+        # print(response.content)
         spreadData = str(response.content).split('\\r\\n')
         spreadData.pop(0)
         matched_lines = []
         line_index = 0
+        args = ' '.join(args)
         for line in spreadData:
-            if str(arg).lower() in line.lower().split(',')[0]:
+            if str(args).lower() in line.lower().split(',')[0]:
                 next_index = 1
                 if line.find(',') > -1:
                     matched_lines += [line]
@@ -235,14 +237,21 @@ async def cam(ctx, arg):
             line_index += 1
         data = ''
         for item in matched_lines:
+            line_note = ""
+            if item.split(',')[2] != "":
+                first_two_length = len(item.split(',')[0]) + len(item.split(',')[1])
+                line_note = " *(" + item[item.find('"', first_two_length + 1):-1] + ")*" if '"' in item.split(',')[2] else " *(" + item.split(',')[2] + ")*"
+                line_note = line_note.replace("\\n", "\n\t")
+                line_note = line_note.replace('"', "")
             if item.split(',')[1].startswith('"'):
                 for el in item.split(',')[1].strip('"').split('\\n'):
-                    data += item.split(',')[0] + " : " + el + "\n"
+                    data += item.split(',')[0] + " : " + el + line_note + "\n"
                 continue
-            data += item.split(',')[0] + " : " + item.split(',')[1] + "\n" if matched_lines != [] else "Not found"
+            data += item.split(',')[0] + " : " + item.split(',')[1] + line_note + "\n" if matched_lines != [] else "Not found"
         e = discord.Embed(title="Freecams, tools and stuff",
                           url="https://docs.google.com/spreadsheets/d/1lnM2SM_RBzqile870zG70E39wuuseqQE0AaPW-P1p5E/edit#gid=0",
-                          description="Based on originalnicodr spreadsheet")
+                          description="Based on originalnicodr spreadsheet",
+                          color=0x3498DB)
         e.set_thumbnail(url="https://cdn.discordapp.com/avatars/128245457141891072/0ab765d7c5bd8fb373dbd3627796aeec.png?size=128")
     await ctx.send(content=data, embed=e)
 
