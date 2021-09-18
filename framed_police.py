@@ -253,7 +253,7 @@ async def cam(ctx, *args):
                           description="Based on originalnicodr spreadsheet",
                           color=0x3498DB)
         e.set_thumbnail(url="https://cdn.discordapp.com/avatars/128245457141891072/0ab765d7c5bd8fb373dbd3627796aeec.png?size=128")
-    await ctx.send(content=data, embed=e)
+    await ctx.send(content=data, embed=e) if len(data) < 2000 else await ctx.send("Search query is too vague, there is too much result to show")
 
 # BUG : when multiple person spamm shots, sometime the bot ignore the event/code and some shots bypass the limit, it may be caused by the fact that 
 # 1. 6th shot get deleted 2. on_message_delete event then decrease user count 3. bot can't keep up so the limit decrease without increasing first or smthng or some events are simply ignored
