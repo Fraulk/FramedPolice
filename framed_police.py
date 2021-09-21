@@ -18,7 +18,7 @@ cred = credentials.Certificate("./secret.json")
 SLapp = firebase_admin.initialize_app(cred, {'databaseURL': DB_URL})
 ref = db.reference("/")
 bot = commands.Bot(command_prefix='!')
-PROD = False
+PROD = True
 # 86400 : 24h
 # 43200 : 12h
 # Test channel : 873627093840314401
