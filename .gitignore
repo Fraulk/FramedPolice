@@ -1,3 +1,4 @@
 .env
 messages.pkl
 test.py
+secret.json

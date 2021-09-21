@@ -1,16 +1,24 @@
 import os
+import re
 import time
 import datetime
 import pickle
 import requests
+import discord
 from discord.ext import commands
 from dotenv import load_dotenv
-import discord
+import firebase_admin
+from firebase_admin import credentials
+from firebase_admin import db
 
 load_dotenv()
 API_KEY = os.getenv("API_KEY")
+DB_URL = os.getenv("DB_URL")
+cred = credentials.Certificate("./secret.json")
+SLapp = firebase_admin.initialize_app(cred, {'databaseURL': DB_URL})
+ref = db.reference("/")
 bot = commands.Bot(command_prefix='!')
-PROD = True
+PROD = False
 # 86400 : 24h
 # 43200 : 12h
 # Test channel : 873627093840314401
@@ -18,7 +26,8 @@ PROD = True
 DELAY = 43200
 LIMIT = 5
 # OUT_CHANNEL_ID = 697797735381860463
-IN_CHANNEL_ID = 549986930071175169 if PROD else 873627093840314401
+SYSChannel = 549986930071175169 if PROD else 873627093840314401
+SLChannel = 859492383845646346 if PROD else 889793521106714634
 
 
 class UserMessage:
@@ -75,6 +84,28 @@ async def save():
     with open('messages.pkl', 'wb') as f:
         pickle.dump(usersMessages, f)
 
+async def secondLook(message):
+    userDict = {}
+    links = re.findall("https:\/\/discord.com\/channels\/.*\w", message.content)
+    if len(links) == 0: return
+    print("---------------------------------------- Building second-look message for " + message.author.name + "#" + message.author.discriminator)
+    async with message.channel.typing():
+        for link in links:
+            slink = link.split("/")
+            original_message = await bot.get_guild(int(slink[-3])).get_channel(int(slink[-2])).fetch_message(int(slink[-1]))
+            # print(original_message.author.name + "#" + original_message.author.discriminator)
+            # print(original_message.attachments[0].url)
+            tempDict = {}
+            tempDict['name'] = original_message.author.name + "#" + original_message.author.discriminator
+            tempDict['imageUrl'] = original_message.attachments[0].url
+            tempDict['width'] = original_message.attachments[0].width
+            tempDict['height'] = original_message.attachments[0].height
+            tempDict['messageUrl'] = link
+            userDict[str(original_message.id)] = tempDict
+    await bot.get_channel(id=SLChannel).send(f"Here is your link : https://second-look.netlify.app?id={message.author.id}")
+    print("---------------------------------------- Building ended")
+    ref.child(str(message.author.id)).set(userDict)
+
 @bot.event
 async def on_ready():
     print(f"{bot.user} logged in")
@@ -82,14 +113,17 @@ async def on_ready():
 @bot.event
 async def on_message(message):
     await bot.process_commands(message)
-    if message.channel.id != IN_CHANNEL_ID:
+    if message.channel.id == SYSChannel:
+        await checkMessage(message)
+        await save()
+    elif message.channel.id == SLChannel:
+        await secondLook(message)
+    else:
         return
-    await checkMessage(message)
-    await save()
 
 @bot.event
 async def on_message_delete(message):
-    if message.channel.id != IN_CHANNEL_ID:
+    if message.channel.id != SYSChannel:
         return
     if len(message.attachments) == 0:
         return
@@ -248,6 +282,7 @@ async def cam(ctx, *args):
                     data += item.split(',')[0] + " : " + el + line_note + "\n"
                 continue
             data += item.split(',')[0] + " : " + item.split(',')[1] + line_note + "\n" if matched_lines != [] else "Not found"
+        if len(data) == 0: data = "Not Found"
         e = discord.Embed(title="Freecams, tools and stuff",
                           url="https://docs.google.com/spreadsheets/d/1lnM2SM_RBzqile870zG70E39wuuseqQE0AaPW-P1p5E/edit#gid=0",
                           description="Based on originalnicodr spreadsheet",
@@ -260,8 +295,6 @@ async def cam(ctx, *args):
 # embeds are sometimes ignored, so a 6th shot can also bypass
 # TODO : also jim said it wasn't necessary but since you said you're bored maybe a counter of shots in share-your-shot and hall-of-framed then every weekend it posts a summary of the week's numbers or something
 # https://stackoverflow.com/questions/65765951/discord-python-counting-messages-from-a-week-and-save-them
-# TODO : !guide, gives you link to framed guide
-# FIXME : reached limit msg is False in !dump even tho the msgCount == limit
 # FIXME : "older shot" triggered false positive, f
 
 if os.path.isfile('./messages.pkl'):
