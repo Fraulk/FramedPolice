@@ -86,7 +86,7 @@ async def save():
 
 async def secondLook(message):
     userDict = {}
-    links = re.findall("https:\/\/discord.com\/channels\/.*\w", message.content)
+    links = re.findall("https:\/\/discord.com\/channels\/.*\/.*\d", message.content)
     if len(links) == 0: return
     print("---------------------------------------- Building second-look message for " + message.author.name + "#" + message.author.discriminator)
     async with message.channel.typing():
@@ -142,7 +142,7 @@ async def on_message_delete(message):
 @bot.command(name='changeDelay', help='Change the delay after reaching the limit for posting shots, with number of seconds')
 @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
 async def changeDelay(ctx, arg):
-    print(f"'changeDelay' command has been used by {ctx.author.name}{ctx.author.discriminator}")
+    print(f"'changeDelay' command has been used by {ctx.author.name}#{ctx.author.discriminator}")
     global DELAY
     DELAY = int(arg)
     print("Delay has been changed to", arg)
@@ -151,7 +151,7 @@ async def changeDelay(ctx, arg):
 @bot.command(name='changeLimit', help='Change the limit for posting shots')
 @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
 async def changeLimit(ctx, arg):
-    print(f"'changeLimit' command has been used by {ctx.author.name}{ctx.author.discriminator}")
+    print(f"'changeLimit' command has been used by {ctx.author.name}#{ctx.author.discriminator}")
     global LIMIT
     LIMIT = int(arg)
     print("Limit has been changed to", arg)
@@ -160,13 +160,13 @@ async def changeLimit(ctx, arg):
 @bot.command(name='currentValue', help='Shows the current values for DELAY and LIMIT')
 @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
 async def currentValue(ctx):
-    print(f"'currentValue' command has been used by {ctx.author.name}{ctx.author.discriminator}")
+    print(f"'currentValue' command has been used by {ctx.author.name}#{ctx.author.discriminator}")
     await ctx.send(f"LIMIT = {LIMIT}\nDELAY = {DELAY}")
 
 @bot.command(name='dumpR', help='Shows data about those who reached the limit and have been dm\'d by the bot')
 @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
 async def dumpR(ctx):
-    print(f"'dumpR' command has been used by {ctx.author.name}{ctx.author.discriminator}")
+    print(f"'dumpR' command has been used by {ctx.author.name}#{ctx.author.discriminator}")
     result = ""
     i = 0
     sortedResult = sorted(usersMessages, key=lambda x: x.name, reverse=False)
@@ -186,7 +186,7 @@ async def dumpR(ctx):
 @bot.command(name='dump', help='Shows data about everybody')
 @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
 async def dump(ctx):
-    print(f"'dump' command has been used by {ctx.author.name}{ctx.author.discriminator}")
+    print(f"'dump' command has been used by {ctx.author.name}#{ctx.author.discriminator}")
     result = ""
     i = 0
     sortedResult = sorted(usersMessages, key=lambda x: x.name, reverse=False)
@@ -232,7 +232,7 @@ async def reset(ctx, arg):
     else:
         response = f"{curUser} has been reset"
         await save()
-    print(f"'reset' command has been used by {ctx.author.name}{ctx.author.discriminator}")
+    print(f"'reset' command has been used by {ctx.author.name}#{ctx.author.discriminator}")
     await ctx.send(response)
 
 @bot.command(name='resetAll', help='Resets the count for everyone')
@@ -243,10 +243,10 @@ async def resetAll(ctx):
         msg.count = 0
         msg.reachedLimit = False
     await save()
-    print(f"'resetAll' command has been used by {ctx.author.name}{ctx.author.discriminator}")
+    print(f"'resetAll' command has been used by {ctx.author.name}#{ctx.author.discriminator}")
     await ctx.send("Everyone has been reset")
 
-@bot.command(name='cam', help='Search for a freecams or a tool by string (quoted if there\'s spaces). ex: !cam "cyberpunk 2077"')
+@bot.command(name='cam', help='Search for a freecams or a tool by string. ex: !cam cyberpunk 2077')
 async def cam(ctx, *args):
     async with ctx.typing():
         response = requests.get('https://docs.google.com/spreadsheet/ccc?key=1lnM2SM_RBzqile870zG70E39wuuseqQE0AaPW-P1p5E&output=csv')
