@@ -281,7 +281,7 @@ async def cam(ctx, *args):
                 for el in item.split(',')[1].strip('"').split('\\n'):
                     data += item.split(',')[0] + " : " + el + line_note + "\n"
                 continue
-            data += item.split(',')[0] + " : " + item.split(',')[1] + line_note + "\n" if matched_lines != [] else "Not found"
+            data += "**" + item.split(',')[0] + "** : " + item.split(',')[1] + line_note + "\n" if item.split(',')[0] != "" else "**╘** : " + item.split(',')[1] + line_note + "\n"
         if len(data) == 0: data = "Not Found"
         e = discord.Embed(title="Freecams, tools and stuff",
                           url="https://docs.google.com/spreadsheets/d/1lnM2SM_RBzqile870zG70E39wuuseqQE0AaPW-P1p5E/edit#gid=0",
