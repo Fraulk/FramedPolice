@@ -106,6 +106,49 @@ async def secondLook(message):
     print("---------------------------------------- Building ended")
     ref.child(str(message.author.id)).set(userDict)
 
+async def getUUU(args):
+    args = ' '.join(args)
+    response = requests.get('https://framedsc.github.io/GeneralGuides/universal_ue4_consoleunlocker.htm')
+    assert response.status_code == 200, 'Wrong status code'
+    # print(response.content)
+    gamesListPage = re.findall(r'(?s)known to work with the unlocker.*Additionally, mos', str(response.content), flags=re.S | re.M)
+    normalizedList = re.sub(r'<code>|<\/code>', '', gamesListPage[0])
+    normalizedList = re.sub(r'\\t\\n', '', normalizedList)
+    normalizedList = re.sub(r'timestop/pause', 'timestop & pause', normalizedList)
+    normalizedList = re.sub(r'Gamepass / MS', 'Gamepass & MS', normalizedList)
+    normalizedList = re.sub(r'console/timestop', 'console & timestop', normalizedList)
+    games = re.finditer(r'<td>([\(\)&\+\,\.\':-`-\w\s^\\t]*)<\/td>', normalizedList, flags=0)
+    gameList = []
+    data = ""
+    for matchNum, match in enumerate(games, start=1):
+        gameList.append(match.group(1))
+        arg = args.lower()
+    for index, game in enumerate(gameList):
+        if arg in game.lower() and index % 2 == 0:
+            data += "**" + gameList[index] + "** works with UUU. Notes : " + gameList[index+1] if gameList[index+1] != '' else "**" + gameList[index] + "** works with UUU\n"
+    return data
+
+async def getGuides(args):
+    args = ' '.join(args)
+    responseAL = requests.get('https://framedsc.github.io/A-L.htm')
+    responseMZ = requests.get('https://framedsc.github.io/M-Z.htm')
+    assert responseAL.status_code == 200, 'Wrong status code'
+    assert responseMZ.status_code == 200, 'Wrong status code'
+    responses = str(responseAL.content) + str(responseMZ.content)
+    normalizedList = re.sub(r'\\t|\\n|\\r', '\n', responses)
+    guides = re.finditer(r'"><a href="(GameGuides\/.*\.htm)">(.*)<\/a>', normalizedList, flags=re.M)
+    guideLinks = []
+    guideNames = []
+    for matchNum, match in enumerate(guides, start=1):
+        guideLinks.append(match.group(1))
+        guideNames.append(match.group(2))
+    arg = args.lower()
+    data = ""
+    for index, game in enumerate(guideNames):
+        if arg in game.lower():
+            data += "**" + guideNames[index] + "** : https://framedsc.github.io/" + guideLinks[index] + "\n"
+    return data
+
 @bot.event
 async def on_ready():
     print(f"{bot.user} logged in")
@@ -288,6 +331,19 @@ async def cam(ctx, *args):
                           description="Based on originalnicodr spreadsheet",
                           color=0x3498DB)
         e.set_thumbnail(url="https://cdn.discordapp.com/avatars/128245457141891072/0ab765d7c5bd8fb373dbd3627796aeec.png?size=128")
+    await ctx.send(content=data, embed=e) if len(data) < 2000 else await ctx.send("Search query is too vague, there is too much result to show")
+
+@bot.command(name='uuu', help='Checks if a game is compatible with UUU or have a guide on the site. ex: !uuu the ascent')
+async def uuu(ctx, *args):
+    async with ctx.typing():
+        data = await getUUU(args)
+        data += await getGuides(args)
+        if len(data) == 0: data = "Not Found"
+        e = discord.Embed(title="FRAMED. Screenshot Community",
+                          url="https://framedsc.github.io/index.htm",
+                          description="© 2019-2021 FRAMED. All rights reserved. ",
+                          color=0x9a9a9a)
+        e.set_thumbnail(url="https://cdn.discordapp.com/emojis/575642684006334464.png?size=80")
     await ctx.send(content=data, embed=e) if len(data) < 2000 else await ctx.send("Search query is too vague, there is too much result to show")
 
 # BUG : when multiple person spamm shots, sometime the bot ignore the event/code and some shots bypass the limit, it may be caused by the fact that 
