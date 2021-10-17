@@ -17,7 +17,9 @@ DB_URL = os.getenv("DB_URL")
 cred = credentials.Certificate("./secret.json")
 SLapp = firebase_admin.initialize_app(cred, {'databaseURL': DB_URL})
 ref = db.reference("/")
-bot = commands.Bot(command_prefix='!')
+intents = discord.Intents.default()
+intents.members = True
+bot = commands.Bot(command_prefix='!', intents=intents)
 PROD = True
 # 86400 : 24h
 # 43200 : 12h
@@ -25,7 +27,9 @@ PROD = True
 # Framed channel : 549986930071175169
 DELAY = 43200
 LIMIT = 5
-# OUT_CHANNEL_ID = 697797735381860463
+WelcomeRole = 873297069715099721 if PROD else 898969812254990367
+JoinedChannel = 873242046675169310 if PROD else 898977778039390268
+LeftChannel = 873242046675169310 if PROD else 874368324023255131
 SYSChannel = 549986930071175169 if PROD else 873627093840314401
 SLChannel = 859492383845646346 if PROD else 889793521106714634
 
@@ -181,6 +185,19 @@ async def on_message_delete(message):
             await save()
             # else:
                 # print('---------------------------------------- Older shots from '+ message.author.name + "#" + message.author.discriminator +' deleted')
+
+@bot.event
+async def on_member_join(member):
+    await member.add_roles(member.guild.get_role(WelcomeRole))
+    channel = bot.get_channel(id=JoinedChannel)
+    await channel.send(member.mention + " has joined **FRAMED - Screenshot Community**. Welcome!")
+    DMChannel = await member.create_dm()
+    await DMChannel.send("""Hi, Welcome to the Framed server.\n\nNew members are limited to viewing the read-me channel and introductions. Please read through the server rules in the read-me, then let people know a little bit about yourself in the introductions channel. You don't need to say much if you're feeling shy.\n\nOnce you leave a message there, and admin will give you access to the rest of the server. Framed is first and foremost a community for people that take screenshots/VP to chat with each other. However, if you struggle with that or don't speak English as your primary language, we won't hold that against you. Maybe try little things like asking or giving feedback on shots.\n\nHave fun and enjoy the server :)""")
+
+@bot.event
+async def on_member_remove(member):
+    channel = bot.get_channel(id=LeftChannel)
+    await channel.send(member.mention + " (" + member.name + ") has left the server")
 
 @bot.command(name='changeDelay', help='Change the delay after reaching the limit for posting shots, with number of seconds')
 @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
@@ -352,6 +369,7 @@ async def uuu(ctx, *args):
 # TODO : also jim said it wasn't necessary but since you said you're bored maybe a counter of shots in share-your-shot and hall-of-framed then every weekend it posts a summary of the week's numbers or something
 # https://stackoverflow.com/questions/65765951/discord-python-counting-messages-from-a-week-and-save-them
 # FIXME : "older shot" triggered false positive, f
+# TODO : i should limit the character to 3 min in cam and uuu commands
 
 if os.path.isfile('./messages.pkl'):
     with open('messages.pkl', 'rb') as f:
