@@ -28,10 +28,12 @@ PROD = True
 DELAY = 43200
 LIMIT = 5
 WelcomeRole = 873297069715099721 if PROD else 898969812254990367
-JoinedChannel = 873242046675169310 if PROD else 898977778039390268
+PadawanRole = 872825204869582869 if PROD else 899266723906220042
+JoinedChannel = 873242046675169310 if PROD else 874368324023255131
 LeftChannel = 873242046675169310 if PROD else 874368324023255131
 SYSChannel = 549986930071175169 if PROD else 873627093840314401
 SLChannel = 859492383845646346 if PROD else 889793521106714634
+IntroChannel = 872825951011082291 if PROD else 898977778039390268
 
 
 class UserMessage:
@@ -153,6 +155,12 @@ async def getGuides(args):
             data += "**" + guideNames[index] + "** : https://framedsc.github.io/" + guideLinks[index] + "\n"
     return data
 
+async def startThread(message):
+    thread = await message.channel.create_thread(name="Hello There", message=message, reason="Thread created for new member")
+    await thread.send("https://tenor.com/view/hello-there-general-kenobi-gif-18841535")
+    await message.author.remove_roles(message.author.guild.get_role(WelcomeRole))
+    await message.author.add_roles(message.author.guild.get_role(PadawanRole))
+
 @bot.event
 async def on_ready():
     print(f"{bot.user} logged in")
@@ -165,6 +173,8 @@ async def on_message(message):
         await save()
     elif message.channel.id == SLChannel:
         await secondLook(message)
+    elif message.channel.id == IntroChannel:
+        await startThread(message)
     else:
         return
 
@@ -189,14 +199,14 @@ async def on_message_delete(message):
 @bot.event
 async def on_member_join(member):
     await member.add_roles(member.guild.get_role(WelcomeRole))
-    channel = bot.get_channel(id=JoinedChannel)
+    channel = bot.get_channel(JoinedChannel)
     await channel.send(member.mention + " has joined **FRAMED - Screenshot Community**. Welcome!")
     DMChannel = await member.create_dm()
     await DMChannel.send("""Welcome to FRAMED!\n\nNew members are limited to viewing the read-me and introductions channels. Please read through the server rules in the read-me, then let people know a little bit about yourself in the introductions channel. You don't need to say much if you're feeling shy.\n\nOnce you leave a message there, an admin will give you access to the rest of the server shortly. Framed is a community first and foremost, we want this to be a place for you to discuss virtual photography and hang out with other members of the hobby. However, if you struggle with that or don't speak English as your primary language, we won't hold that against you. You could start with little things like asking for and giving feedback on shots.\n\nHave fun and enjoy the server :)""")
 
 @bot.event
 async def on_member_remove(member):
-    channel = bot.get_channel(id=LeftChannel)
+    channel = bot.get_channel(LeftChannel)
     await channel.send(member.mention + " (" + member.name + ") has left the server")
 
 @bot.command(name='changeDelay', help='Change the delay after reaching the limit for posting shots, with number of seconds')
