@@ -156,7 +156,8 @@ async def getGuides(args):
     return data
 
 async def startThread(message):
-    thread = await message.channel.create_thread(name="Hello There", message=message, reason="Thread created for new member")
+    title = f"Hello There, {message.author.name}"
+    thread = await message.channel.create_thread(name=title, message=message, reason="Thread created for new member")
     await thread.send("https://tenor.com/view/hello-there-general-kenobi-gif-18841535")
     await message.author.remove_roles(message.author.guild.get_role(WelcomeRole))
     await message.author.add_roles(message.author.guild.get_role(PadawanRole))
