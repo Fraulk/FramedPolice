@@ -108,7 +108,7 @@ async def secondLook(message):
             tempDict['height'] = original_message.attachments[0].height
             tempDict['messageUrl'] = link
             userDict[str(original_message.id)] = tempDict
-    await bot.get_channel(id=SLChannel).send(f"Here is your link : https://second-look.netlify.app?id={message.author.id}")
+    await bot.get_channel(SLChannel).send(f"Here is your link : https://second-look.netlify.app?id={message.author.id}")
     print("---------------------------------------- Building ended")
     ref.child(str(message.author.id)).set(userDict)
 
