@@ -112,6 +112,42 @@ async def secondLook(message):
     print("---------------------------------------- Building ended")
     ref.child(str(message.author.id)).set(userDict)
 
+async def getCams(args):
+    response = requests.get('https://docs.google.com/spreadsheet/ccc?key=1lnM2SM_RBzqile870zG70E39wuuseqQE0AaPW-P1p5E&output=csv')
+    assert response.status_code == 200, 'Wrong status code'
+    # print(response.content)
+    spreadData = str(response.content).split('\\r\\n')
+    spreadData.pop(0)
+    matched_lines = []
+    line_index = 0
+    args = ' '.join(args)
+    for line in spreadData:
+        if str(args).lower() in line.lower().split(',')[0]:
+            next_index = 1
+            if line.find(',') > -1:
+                matched_lines += [line]
+            if(spreadData[line_index + next_index] == ''): next_index += 1
+            while (line_index + next_index < len(spreadData) 
+                    and spreadData[line_index + next_index].split(',')[0] == ''):
+                if spreadData[line_index + next_index].split(',')[1].startswith('http'):
+                    matched_lines += [spreadData[line_index + next_index]]
+                next_index += 1
+        line_index += 1
+    data = ''
+    for item in matched_lines:
+        line_note = ""
+        if item.split(',')[2] != "":
+            first_two_length = len(item.split(',')[0]) + len(item.split(',')[1])
+            line_note = " *(" + item[item.find('"', first_two_length + 1):-1] + ")*" if '"' in item.split(',')[2] else " *(" + item.split(',')[2] + ")*"
+            line_note = line_note.replace("\\n", "\n\t")
+            line_note = line_note.replace('"', "")
+        if item.split(',')[1].startswith('"'):
+            for el in item.split(',')[1].strip('"').split('\\n'):
+                data += item.split(',')[0] + " : " + el + line_note + "\n"
+            continue
+        data += "**" + item.split(',')[0] + "** : <" + item.split(',')[1] + ">" + line_note + "\n" if item.split(',')[0] != "" else "**╘** : <" + item.split(',')[1] + ">" + line_note + "\n"
+    return data
+
 async def getUUU(args):
     args = ' '.join(args)
     response = requests.get('https://framedsc.github.io/GeneralGuides/universal_ue4_consoleunlocker.htm')
@@ -152,7 +188,7 @@ async def getGuides(args):
     data = ""
     for index, game in enumerate(guideNames):
         if arg in game.lower():
-            data += "**" + guideNames[index] + "** : https://framedsc.github.io/" + guideLinks[index] + "\n"
+            data += "**" + guideNames[index] + "** : <https://framedsc.github.io/" + guideLinks[index] + ">\n"
     return data
 
 async def startThread(message):
@@ -320,59 +356,59 @@ async def resetAll(ctx):
 @bot.command(name='cam', help='Search for a freecams or a tool by string. ex: !cam cyberpunk 2077')
 async def cam(ctx, *args):
     async with ctx.typing():
-        response = requests.get('https://docs.google.com/spreadsheet/ccc?key=1lnM2SM_RBzqile870zG70E39wuuseqQE0AaPW-P1p5E&output=csv')
-        assert response.status_code == 200, 'Wrong status code'
-        # print(response.content)
-        spreadData = str(response.content).split('\\r\\n')
-        spreadData.pop(0)
-        matched_lines = []
-        line_index = 0
-        args = ' '.join(args)
-        for line in spreadData:
-            if str(args).lower() in line.lower().split(',')[0]:
-                next_index = 1
-                if line.find(',') > -1:
-                    matched_lines += [line]
-                if(spreadData[line_index + next_index] == ''): next_index += 1
-                while (line_index + next_index < len(spreadData) 
-                        and spreadData[line_index + next_index].split(',')[0] == ''):
-                    if spreadData[line_index + next_index].split(',')[1].startswith('http'):
-                        matched_lines += [spreadData[line_index + next_index]]
-                    next_index += 1
-            line_index += 1
-        data = ''
-        for item in matched_lines:
-            line_note = ""
-            if item.split(',')[2] != "":
-                first_two_length = len(item.split(',')[0]) + len(item.split(',')[1])
-                line_note = " *(" + item[item.find('"', first_two_length + 1):-1] + ")*" if '"' in item.split(',')[2] else " *(" + item.split(',')[2] + ")*"
-                line_note = line_note.replace("\\n", "\n\t")
-                line_note = line_note.replace('"', "")
-            if item.split(',')[1].startswith('"'):
-                for el in item.split(',')[1].strip('"').split('\\n'):
-                    data += item.split(',')[0] + " : " + el + line_note + "\n"
-                continue
-            data += "**" + item.split(',')[0] + "** : " + item.split(',')[1] + line_note + "\n" if item.split(',')[0] != "" else "**╘** : " + item.split(',')[1] + line_note + "\n"
+        data = await getCams(args)
         if len(data) == 0: data = "Not Found"
         e = discord.Embed(title="Freecams, tools and stuff",
                           url="https://docs.google.com/spreadsheets/d/1lnM2SM_RBzqile870zG70E39wuuseqQE0AaPW-P1p5E/edit#gid=0",
                           description="Based on originalnicodr spreadsheet",
                           color=0x3498DB)
         e.set_thumbnail(url="https://cdn.discordapp.com/avatars/128245457141891072/0ab765d7c5bd8fb373dbd3627796aeec.png?size=128")
-    await ctx.send(content=data, embed=e) if len(data) < 2000 else await ctx.send("Search query is too vague, there is too much result to show")
+    await ctx.send(content=data, embed=e) if len(data) < 2000 else await ctx.send("Search query is too vague, there are too many results to show")
 
 @bot.command(name='uuu', help='Checks if a game is compatible with UUU or have a guide on the site. ex: !uuu the ascent')
 async def uuu(ctx, *args):
     async with ctx.typing():
         data = await getUUU(args)
-        data += await getGuides(args)
         if len(data) == 0: data = "Not Found"
         e = discord.Embed(title="FRAMED. Screenshot Community",
                           url="https://framedsc.github.io/index.htm",
                           description="© 2019-2021 FRAMED. All rights reserved. ",
                           color=0x9a9a9a)
         e.set_thumbnail(url="https://cdn.discordapp.com/emojis/575642684006334464.png?size=80")
-    await ctx.send(content=data, embed=e) if len(data) < 2000 else await ctx.send("Search query is too vague, there is too much result to show")
+    await ctx.send(content=data, embed=e) if len(data) < 2000 else await ctx.send("Search query is too vague, there are too many results to show")
+
+@bot.command(name='guide', help='Checks if a game have a guide on the site. ex: !guide cyberpunk')
+async def guide(ctx, *args):
+    async with ctx.typing():
+        data = await getGuides(args)
+        if len(data) == 0: data = "Not Found"
+        e = discord.Embed(title="FRAMED. Screenshot Community",
+                          url="https://framedsc.github.io/index.htm",
+                          description="© 2019-2021 FRAMED. All rights reserved. ",
+                          color=0x9a9a9a)
+        e.set_thumbnail(url="https://cdn.discordapp.com/emojis/575642684006334464.png?size=80")
+    await ctx.send(content=data, embed=e) if len(data) < 2000 else await ctx.send("Search query is too vague, there are too many results to show")
+
+@bot.command(name='tool', help='Checks if a game have a guide, cam or works with UUU. ex: !tool cyberpunk')
+async def tool(ctx, *args):
+    async with ctx.typing():
+        cams = await getCams(args)
+        uuus = await getUUU(args)
+        guides = await getGuides(args)
+        data = ""
+        if len(cams) > 0:
+            data += cams + "----\n" if len(uuus) > 0 or len(guides) > 0 else cams
+        if len(uuus) > 0:
+            data += uuus + "----\n" if len(guides) > 0 else uuus
+        if len(guides) > 0:
+            data += guides
+        if len(data) == 0: data = "Not Found"
+        # e = discord.Embed(title="FRAMED. Screenshot Community",
+        #                   url="https://framedsc.github.io/index.htm",
+        #                   description="© 2019-2021 FRAMED. All rights reserved. ",
+        #                   color=0x9a9a9a)
+        # e.set_thumbnail(url="https://cdn.discordapp.com/emojis/575642684006334464.png?size=80")
+    await ctx.send(content=data) if len(data) < 2000 else await ctx.send("Search query is too vague, there are too many results to show") # + str(len(data))
 
 # BUG : when multiple person spamm shots, sometime the bot ignore the event/code and some shots bypass the limit, it may be caused by the fact that 
 # 1. 6th shot get deleted 2. on_message_delete event then decrease user count 3. bot can't keep up so the limit decrease without increasing first or smthng or some events are simply ignored
@@ -381,6 +417,8 @@ async def uuu(ctx, *args):
 # https://stackoverflow.com/questions/65765951/discord-python-counting-messages-from-a-week-and-save-them
 # FIXME : "older shot" triggered false positive, f
 # TODO : i should limit the character to 3 min in cam and uuu commands
+# TODO : create a !cheat commands that gets cheat table from framed site
+# TODO : put things in embeds : https://leovoel.github.io/embed-visualizer/
 
 if os.path.isfile('./messages.pkl'):
     with open('messages.pkl', 'rb') as f:
