@@ -121,6 +121,7 @@ async def getCams(args):
     matched_lines = []
     line_index = 0
     args = ' '.join(args)
+    args = args.replace("'", "\\'")
     for line in spreadData:
         if str(args).lower() in line.lower().split(',')[0]:
             next_index = 1
@@ -150,6 +151,7 @@ async def getCams(args):
 
 async def getUUU(args):
     args = ' '.join(args)
+    args = args.replace("'", "\\'")
     response = requests.get('https://framedsc.github.io/GeneralGuides/universal_ue4_consoleunlocker.htm')
     assert response.status_code == 200, 'Wrong status code'
     # print(response.content)
@@ -172,6 +174,7 @@ async def getUUU(args):
 
 async def getGuides(args):
     args = ' '.join(args)
+    args = args.replace("'", "\\'")
     responseAL = requests.get('https://framedsc.github.io/A-L.htm')
     responseMZ = requests.get('https://framedsc.github.io/M-Z.htm')
     assert responseAL.status_code == 200, 'Wrong status code'
@@ -189,6 +192,29 @@ async def getGuides(args):
     for index, game in enumerate(guideNames):
         if arg in game.lower():
             data += "**" + guideNames[index] + "** : <https://framedsc.github.io/" + guideLinks[index] + ">\n"
+    return data
+
+async def getCheats(args):
+    args = ' '.join(args)
+    # args = args.replace("'", "\\'")
+    response = requests.get("https://framedsc.github.io/cheattablearchive.htm", allow_redirects=True)
+    assert response.status_code == 200, 'Wrong status code'
+    cheats = re.finditer(r'^<h3.*?>(.*?)<.*?<\/ul', response.text, flags=re.S | re.M)
+    cheatsName = []
+    cheatsContent = []
+    data = ""
+    for matchNum, match in enumerate(cheats, start=1):
+        cheatsName.append(match.group(1))
+        cheatsContent.append(match.group(0))
+    arg = args.lower()
+    for index, cheat in enumerate(cheatsName):
+        if arg in cheat.lower():
+            if cheat.find("(") > -1:
+                cheat = cheat[:-2]
+            data += "**" + cheat + "** : "
+            cheatsRegex = re.finditer(r'(CheatTables\/Archive\/.*\.(?:CT|ct))">', cheatsContent[index])
+            for matchNum2, match2 in enumerate(cheatsRegex, start=1):
+                data += "<https://framedsc.github.io/" + match2.group(1) + ">\n" if matchNum2 == 1 else "\t**╘** : <https://framedsc.github.io/" + match2.group(1) + ">\n"
     return data
 
 async def startThread(message):
@@ -389,19 +415,34 @@ async def guide(ctx, *args):
         e.set_thumbnail(url="https://cdn.discordapp.com/emojis/575642684006334464.png?size=80")
     await ctx.send(content=data, embed=e) if len(data) < 2000 else await ctx.send("Search query is too vague, there are too many results to show")
 
+@bot.command(name='cheat', help='Checks if a game have cheat tables on the site. ex: !cheat alien')
+async def cheat(ctx, *args):
+    async with ctx.typing():
+        data = await getCheats(args)
+        if len(data) == 0: data = "Not Found"
+        e = discord.Embed(title="FRAMED. Screenshot Community",
+                          url="https://framedsc.github.io/index.htm",
+                          description="© 2019-2021 FRAMED. All rights reserved. ",
+                          color=0x9a9a9a)
+        e.set_thumbnail(url="https://cdn.discordapp.com/emojis/575642684006334464.png?size=80")
+    await ctx.send(content=data, embed=e) if len(data) < 2000 else await ctx.send("Search query is too vague, there are too many results to show")
+
 @bot.command(name='tool', help='Checks if a game have a guide, cam or works with UUU. ex: !tool cyberpunk')
 async def tool(ctx, *args):
     async with ctx.typing():
         cams = await getCams(args)
         uuus = await getUUU(args)
         guides = await getGuides(args)
+        cheats = await getCheats(args)
         data = ""
         if len(cams) > 0:
-            data += cams + "----\n" if len(uuus) > 0 or len(guides) > 0 else cams
+            data += cams + "----\n" if len(uuus) > 0 or len(guides) > 0 or len(cheats) > 0 else cams
         if len(uuus) > 0:
-            data += uuus + "----\n" if len(guides) > 0 else uuus
+            data += uuus + "----\n" if len(guides) > 0 or len(cheats) > 0 else uuus
         if len(guides) > 0:
-            data += guides
+            data += guides + "----\n" if len(cheats) > 0 else guides
+        if len(cheats) > 0:
+            data += cheats
         if len(data) == 0: data = "Not Found"
         # e = discord.Embed(title="FRAMED. Screenshot Community",
         #                   url="https://framedsc.github.io/index.htm",
