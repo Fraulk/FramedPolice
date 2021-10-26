@@ -44,7 +44,6 @@ class UserMessage:
         self.count = count
         self.reachedLimit = reachedLimit
 
-
 usersMessages = []
 
 async def checkMessage(message):
@@ -92,7 +91,7 @@ async def save():
 
 async def secondLook(message):
     userDict = {}
-    links = re.findall("https:\/\/discord.com\/channels\/.*\/.*\d", message.content)
+    links = re.findall("(https:\/\/discord.com\/channels\/.*\/.*\d) ", message.content)
     if len(links) == 0: return
     print("---------------------------------------- Building second-look message for " + message.author.name + "#" + message.author.discriminator)
     async with message.channel.typing():
@@ -460,6 +459,8 @@ async def tool(ctx, *args):
 # TODO : i should limit the character to 3 min in cam and uuu commands
 # TODO : create a !cheat commands that gets cheat table from framed site
 # TODO : put things in embeds : https://leovoel.github.io/embed-visualizer/
+# FIXME : catch commands used without arguments
+# FIXME : remove spaces from links, test with cyberpunk
 
 if os.path.isfile('./messages.pkl'):
     with open('messages.pkl', 'rb') as f:
