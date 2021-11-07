@@ -237,6 +237,8 @@ async def on_message(message):
         await secondLook(message)
     elif message.channel.id == IntroChannel:
         await startThread(message)
+    elif message.content.lower() == "good bot":
+        await message.add_reaction('<:catblobheart:822464758530965546>')
     else:
         return
 
