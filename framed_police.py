@@ -437,11 +437,11 @@ async def tool(ctx, *args):
         cheats = await getCheats(args)
         data = ""
         if len(cams) > 0:
-            data += cams + "----\n" if len(uuus) > 0 or len(guides) > 0 or len(cheats) > 0 else cams
+            data += cams + "---- UUU\n" if len(uuus) > 0 or len(guides) > 0 or len(cheats) > 0 else cams
         if len(uuus) > 0:
-            data += uuus + "----\n" if len(guides) > 0 or len(cheats) > 0 else uuus
+            data += uuus + "---- Guides\n" if len(guides) > 0 or len(cheats) > 0 else uuus
         if len(guides) > 0:
-            data += guides + "----\n" if len(cheats) > 0 else guides
+            data += guides + "---- Cheats\n" if len(cheats) > 0 else guides
         if len(cheats) > 0:
             data += cheats
         if len(data) == 0: data = "Not Found"
@@ -451,6 +451,10 @@ async def tool(ctx, *args):
         #                   color=0x9a9a9a)
         # e.set_thumbnail(url="https://cdn.discordapp.com/emojis/575642684006334464.png?size=80")
     await ctx.send(content=data) if len(data) < 2000 else await ctx.send("Search query is too vague, there are too many results to show") # + str(len(data))
+
+@bot.command(name='tools', help='Alias for !tool, because a lotta people does the mistake lol')
+async def tools(ctx, *args):
+    await tool(ctx, *args)
 
 # BUG : when multiple person spamm shots, sometime the bot ignore the event/code and some shots bypass the limit, it may be caused by the fact that 
 # 1. 6th shot get deleted 2. on_message_delete event then decrease user count 3. bot can't keep up so the limit decrease without increasing first or smthng or some events are simply ignored
