@@ -134,6 +134,7 @@ async def getCams(args):
                 next_index += 1
         line_index += 1
     data = ''
+    gameNames = []
     for item in matched_lines:
         line_note = ""
         if item.split(',')[2] != "":
@@ -146,7 +147,9 @@ async def getCams(args):
                 data += item.split(',')[0] + " : " + el + line_note + "\n"
             continue
         data += "**" + item.split(',')[0] + "** : <" + item.split(',')[1] + ">" + line_note + "\n" if item.split(',')[0] != "" else "**╘** : <" + item.split(',')[1] + ">" + line_note + "\n"
-    return data
+        gameNames.append(item.split(',')[0])
+    gameNames[:] = ["**" + x + "**" for x in gameNames if x]
+    return data, gameNames
 
 async def getUUU(args):
     args = ' '.join(args)
@@ -163,13 +166,15 @@ async def getUUU(args):
     games = re.finditer(r'<td>([\(\)&\+\,\.\':-`-\w\s^\\t]*)<\/td>', normalizedList, flags=0)
     gameList = []
     data = ""
+    gameNames = []
     for matchNum, match in enumerate(games, start=1):
         gameList.append(match.group(1))
         arg = args.lower()
     for index, game in enumerate(gameList):
         if arg in game.lower() and index % 2 == 0:
-            data += "**" + gameList[index] + "** works with UUU. Notes : " + gameList[index+1] if gameList[index+1] != '' else "**" + gameList[index] + "** works with UUU\n"
-    return data
+            data += "**" + gameList[index] + "** works with UUU. Notes : " + gameList[index+1] + "\n" if gameList[index+1] != '' else "**" + gameList[index] + "** works with UUU\n"
+            gameNames.append("**" + gameList[index] + "**")
+    return data, gameNames
 
 async def getGuides(args):
     args = ' '.join(args)
@@ -188,10 +193,12 @@ async def getGuides(args):
         guideNames.append(match.group(2))
     arg = args.lower()
     data = ""
+    gameNames = []
     for index, game in enumerate(guideNames):
         if arg in game.lower():
             data += "**" + guideNames[index] + "** : <https://framedsc.github.io/" + guideLinks[index] + ">\n"
-    return data
+            gameNames.append("**" + guideNames[index] + "**")
+    return data, gameNames
 
 async def getCheats(args):
     args = ' '.join(args)
@@ -202,6 +209,7 @@ async def getCheats(args):
     cheatsName = []
     cheatsContent = []
     data = ""
+    gameNames = []
     for matchNum, match in enumerate(cheats, start=1):
         cheatsName.append(match.group(1))
         cheatsContent.append(match.group(0))
@@ -211,10 +219,11 @@ async def getCheats(args):
             if cheat.find("(") > -1:
                 cheat = cheat[:-2]
             data += "**" + cheat + "** : "
+            gameNames.append("**" + cheat + "**")
             cheatsRegex = re.finditer(r'(CheatTables\/Archive\/.*\.(?:CT|ct))">', cheatsContent[index])
             for matchNum2, match2 in enumerate(cheatsRegex, start=1):
                 data += "<https://framedsc.github.io/" + match2.group(1) + ">\n" if matchNum2 == 1 else "\t**╘** : <https://framedsc.github.io/" + match2.group(1) + ">\n"
-    return data
+    return data, gameNames
 
 async def startThread(message):
     title = f"Hello There, {message.author.name}"
@@ -222,6 +231,15 @@ async def startThread(message):
     await thread.send("https://tenor.com/view/hello-there-general-kenobi-gif-18841535")
     await message.author.remove_roles(message.author.guild.get_role(WelcomeRole))
     await message.author.add_roles(message.author.guild.get_role(PadawanRole))
+
+async def over2000(data, gameNames):
+    isOver2000 = len(data) > 2000
+    if(isOver2000):
+        response = "Search query is too vague, there are too many results to show.\n" + str(len(gameNames)) + " games corresponds to your query, please retype the command with one of them : \n"
+        response += "  |  ".join([name for name in gameNames])
+        return response
+    return data
+
 
 @bot.event
 async def on_ready():
@@ -239,6 +257,8 @@ async def on_message(message):
         await startThread(message)
     elif message.content.lower() == "good bot":
         await message.add_reaction('<:catblobheart:822464758530965546>')
+    elif message.content.lower() == "bad bot":
+        await message.add_reaction('<:angery:774364490057515058>')
     else:
         return
 
@@ -383,58 +403,62 @@ async def resetAll(ctx):
 @bot.command(name='cam', help='Search for a freecams or a tool by string. ex: !cam cyberpunk 2077')
 async def cam(ctx, *args):
     async with ctx.typing():
-        data = await getCams(args)
+        data, gameNames = await getCams(args)
         if len(data) == 0: data = "Not Found"
         e = discord.Embed(title="Freecams, tools and stuff",
                           url="https://docs.google.com/spreadsheets/d/1lnM2SM_RBzqile870zG70E39wuuseqQE0AaPW-P1p5E/edit#gid=0",
                           description="Based on originalnicodr spreadsheet",
                           color=0x3498DB)
         e.set_thumbnail(url="https://cdn.discordapp.com/avatars/128245457141891072/0ab765d7c5bd8fb373dbd3627796aeec.png?size=128")
+        data = await over2000(data, gameNames)
     await ctx.send(content=data, embed=e) if len(data) < 2000 else await ctx.send("Search query is too vague, there are too many results to show")
 
 @bot.command(name='uuu', help='Checks if a game is compatible with UUU or have a guide on the site. ex: !uuu the ascent')
 async def uuu(ctx, *args):
     async with ctx.typing():
-        data = await getUUU(args)
+        data, gameNames = await getUUU(args)
         if len(data) == 0: data = "Not Found"
         e = discord.Embed(title="FRAMED. Screenshot Community",
                           url="https://framedsc.github.io/index.htm",
                           description="© 2019-2021 FRAMED. All rights reserved. ",
                           color=0x9a9a9a)
         e.set_thumbnail(url="https://cdn.discordapp.com/emojis/575642684006334464.png?size=80")
+        data = await over2000(data, gameNames)
     await ctx.send(content=data, embed=e) if len(data) < 2000 else await ctx.send("Search query is too vague, there are too many results to show")
 
 @bot.command(name='guide', help='Checks if a game have a guide on the site. ex: !guide cyberpunk')
 async def guide(ctx, *args):
     async with ctx.typing():
-        data = await getGuides(args)
+        data, gameNames = await getGuides(args)
         if len(data) == 0: data = "Not Found"
         e = discord.Embed(title="FRAMED. Screenshot Community",
                           url="https://framedsc.github.io/index.htm",
                           description="© 2019-2021 FRAMED. All rights reserved. ",
                           color=0x9a9a9a)
         e.set_thumbnail(url="https://cdn.discordapp.com/emojis/575642684006334464.png?size=80")
+        data = await over2000(data, gameNames)
     await ctx.send(content=data, embed=e) if len(data) < 2000 else await ctx.send("Search query is too vague, there are too many results to show")
 
 @bot.command(name='cheat', help='Checks if a game have cheat tables on the site. ex: !cheat alien')
 async def cheat(ctx, *args):
     async with ctx.typing():
-        data = await getCheats(args)
+        data, gameNames = await getCheats(args)
         if len(data) == 0: data = "Not Found"
         e = discord.Embed(title="FRAMED. Screenshot Community",
                           url="https://framedsc.github.io/index.htm",
                           description="© 2019-2021 FRAMED. All rights reserved. ",
                           color=0x9a9a9a)
         e.set_thumbnail(url="https://cdn.discordapp.com/emojis/575642684006334464.png?size=80")
+        data = await over2000(data, gameNames)
     await ctx.send(content=data, embed=e) if len(data) < 2000 else await ctx.send("Search query is too vague, there are too many results to show")
 
 @bot.command(name='tool', help='Checks if a game have a guide, cam or works with UUU. ex: !tool cyberpunk')
 async def tool(ctx, *args):
     async with ctx.typing():
-        cams = await getCams(args)
-        uuus = await getUUU(args)
-        guides = await getGuides(args)
-        cheats = await getCheats(args)
+        cams, camGameNames = await getCams(args)
+        uuus, uuuGameNames = await getUUU(args)
+        guides, guideGameNames = await getGuides(args)
+        cheats, cheatGameNames = await getCheats(args)
         data = ""
         if len(cams) > 0:
             data += cams + "---- UUU\n" if len(uuus) > 0 or len(guides) > 0 or len(cheats) > 0 else cams
@@ -450,6 +474,7 @@ async def tool(ctx, *args):
         #                   description="© 2019-2021 FRAMED. All rights reserved. ",
         #                   color=0x9a9a9a)
         # e.set_thumbnail(url="https://cdn.discordapp.com/emojis/575642684006334464.png?size=80")
+        data = await over2000(data, camGameNames + uuuGameNames + guideGameNames + cheatGameNames)
     await ctx.send(content=data) if len(data) < 2000 else await ctx.send("Search query is too vague, there are too many results to show") # + str(len(data))
 
 @bot.command(name='tools', help='Alias for !tool, because a lotta people does the mistake lol')
