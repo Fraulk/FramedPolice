@@ -1,15 +1,17 @@
 import os
 import re
 import time
-import datetime
 import pickle
-import requests
+import random
 import discord
-from discord.ext import commands
-from dotenv import load_dotenv
+import datetime
+import requests
 import firebase_admin
-from firebase_admin import credentials
+from PIL import Image
 from firebase_admin import db
+from dotenv import load_dotenv
+from discord.ext import commands
+from firebase_admin import credentials
 
 load_dotenv()
 API_KEY = os.getenv("API_KEY")
@@ -35,7 +37,6 @@ SYSChannel = 549986930071175169 if PROD else 873627093840314401
 SLChannel = 859492383845646346 if PROD else 889793521106714634
 IntroChannel = 872825951011082291 if PROD else 898977778039390268
 
-
 class UserMessage:
     def __init__(self, id, name, time, count, reachedLimit):
         self.id = id
@@ -45,6 +46,39 @@ class UserMessage:
         self.reachedLimit = reachedLimit
 
 usersMessages = []
+
+badBot = {
+        'batmanSlap': {
+            'size': (75, 75),
+            'botPosition': (265, 30),
+            'badPosition': (132, 100)
+        },
+        'pepeSlap': {
+            'size': (100, 100),
+            'botPosition': (80, 290),
+            'badPosition': (-100, -100)
+        },
+        'kermitSlap': {
+            'size': (128, 128),
+            'botPosition': (690, 320),
+            'badPosition': (-200, -200)
+        },
+        'humanSlap': {
+            'size': (128, 128),
+            'botPosition': (690, 90),
+            'badPosition': (160, 90)
+        },
+        'drawSlap': {
+            'size': (128, 128),
+            'botPosition': (250, 30),
+            'badPosition': (50, 240)
+        },
+        'terminatorSlap': {
+            'size': (35, 35),
+            'botPosition': (175, 20),
+            'badPosition': (20, 90)
+        },
+    }
 
 async def checkMessage(message):
     userId = message.author.id
@@ -240,6 +274,19 @@ async def over2000(data, gameNames):
         return response
     return data
 
+async def slap(message):
+    badGuy = requests.get(message.author.avatar, stream=True).raw
+    memePath, memeInfo = random.choice(list(badBot.items()))
+    meme = Image.open('images/' + memePath + '.jpg').convert('RGB')
+    botImg = Image.open('images/bot.jpg')
+    botImg.thumbnail(memeInfo['size'], Image.ANTIALIAS)
+    badGuy = Image.open(badGuy)
+    badGuy.thumbnail(memeInfo['size'], Image.ANTIALIAS)
+    memeCopy = meme.copy()
+    memeCopy.paste(botImg, memeInfo['botPosition'])
+    memeCopy.paste(badGuy, memeInfo['badPosition'])
+    memeCopy.save('./temp.jpg', quality=95)
+    await message.reply(file=discord.File('temp.jpg'))
 
 @bot.event
 async def on_ready():
@@ -259,6 +306,7 @@ async def on_message(message):
         await message.add_reaction('<:catblobheart:822464758530965546>')
     elif message.content.lower() == "bad bot":
         await message.add_reaction('<:angery:774364490057515058>')
+        await slap(message)
     else:
         return
 
