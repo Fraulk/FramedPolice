@@ -78,7 +78,40 @@ badBot = {
             'botPosition': (175, 20),
             'badPosition': (20, 90)
         },
+        'seifieldSlap': {
+            'size': (100, 100),
+            'botPosition': (220, 70),
+            'badPosition': (-100, -100)
+        },
+        'catSlap': {
+            'size': (60, 60),
+            'botPosition': (245, 70),
+            'badPosition': (115, 150)
+        },
+        'woomanSlap': {
+            'size': (100, 100),
+            'botPosition': (450, 430),
+            'badPosition': (370, 90)
+        },
     }
+
+notFound = [
+    "I couldn't find anything for `{}`.",
+    "There doesn't seem to be anything for `{}`.",
+    "It looks like there's nothing for `{}`."
+]
+
+tooVague = [
+    "I found too many results for `{}` ! Did you mean : ",
+    "`{}` is too vague, were you looking for : "
+]
+
+found = [
+    "Found these for ya!",
+    "Were you looking for these?",
+    "Hope these help!",
+    "I managed to get these for you!"
+]
 
 async def checkMessage(message):
     userId = message.author.id
@@ -266,11 +299,14 @@ async def startThread(message):
     await message.author.remove_roles(message.author.guild.get_role(WelcomeRole))
     await message.author.add_roles(message.author.guild.get_role(PadawanRole))
 
-async def over2000(data, gameNames):
+async def over2000(data, gameNames, query):
     isOver2000 = len(data) > 2000
     if(isOver2000):
-        response = "Search query is too vague, there are too many results to show.\n" + str(len(gameNames)) + " games corresponds to your query, please retype the command with one of them : \n"
+        # response = "Search query is too vague, there are too many results to show.\n" + str(len(gameNames)) + " games corresponds to your query, please retype the command with one of them : \n"
+        response = random.choice(tooVague).format(' '.join(query))
         response += "  |  ".join([name for name in gameNames])
+        if(len(gameNames) > 15):
+            response = "I found too many results for `{}` ! Please be more specific !".format(' '.join(query))
         return response
     return data
 
@@ -452,52 +488,52 @@ async def resetAll(ctx):
 async def cam(ctx, *args):
     async with ctx.typing():
         data, gameNames = await getCams(args)
-        if len(data) == 0: data = "Not Found"
+        if len(data) == 0: data = random.choice(notFound).format(' '.join(args))
         e = discord.Embed(title="Freecams, tools and stuff",
                           url="https://docs.google.com/spreadsheets/d/1lnM2SM_RBzqile870zG70E39wuuseqQE0AaPW-P1p5E/edit#gid=0",
                           description="Based on originalnicodr spreadsheet",
                           color=0x3498DB)
         e.set_thumbnail(url="https://cdn.discordapp.com/avatars/128245457141891072/0ab765d7c5bd8fb373dbd3627796aeec.png?size=128")
-        data = await over2000(data, gameNames)
+        data = await over2000(data, gameNames, args)
     await ctx.send(content=data, embed=e) if len(data) < 2000 else await ctx.send("Search query is too vague, there are too many results to show")
 
 @bot.command(name='uuu', help='Checks if a game is compatible with UUU or have a guide on the site. ex: !uuu the ascent')
 async def uuu(ctx, *args):
     async with ctx.typing():
         data, gameNames = await getUUU(args)
-        if len(data) == 0: data = "Not Found"
+        if len(data) == 0: data = random.choice(notFound).format(' '.join(args))
         e = discord.Embed(title="FRAMED. Screenshot Community",
                           url="https://framedsc.github.io/index.htm",
                           description="© 2019-2021 FRAMED. All rights reserved. ",
                           color=0x9a9a9a)
         e.set_thumbnail(url="https://cdn.discordapp.com/emojis/575642684006334464.png?size=80")
-        data = await over2000(data, gameNames)
+        data = await over2000(data, gameNames, args)
     await ctx.send(content=data, embed=e) if len(data) < 2000 else await ctx.send("Search query is too vague, there are too many results to show")
 
 @bot.command(name='guide', help='Checks if a game have a guide on the site. ex: !guide cyberpunk')
 async def guide(ctx, *args):
     async with ctx.typing():
         data, gameNames = await getGuides(args)
-        if len(data) == 0: data = "Not Found"
+        if len(data) == 0: data = random.choice(notFound).format(' '.join(args))
         e = discord.Embed(title="FRAMED. Screenshot Community",
                           url="https://framedsc.github.io/index.htm",
                           description="© 2019-2021 FRAMED. All rights reserved. ",
                           color=0x9a9a9a)
         e.set_thumbnail(url="https://cdn.discordapp.com/emojis/575642684006334464.png?size=80")
-        data = await over2000(data, gameNames)
+        data = await over2000(data, gameNames, args)
     await ctx.send(content=data, embed=e) if len(data) < 2000 else await ctx.send("Search query is too vague, there are too many results to show")
 
 @bot.command(name='cheat', help='Checks if a game have cheat tables on the site. ex: !cheat alien')
 async def cheat(ctx, *args):
     async with ctx.typing():
         data, gameNames = await getCheats(args)
-        if len(data) == 0: data = "Not Found"
+        if len(data) == 0: data = random.choice(notFound).format(' '.join(args))
         e = discord.Embed(title="FRAMED. Screenshot Community",
                           url="https://framedsc.github.io/index.htm",
                           description="© 2019-2021 FRAMED. All rights reserved. ",
                           color=0x9a9a9a)
         e.set_thumbnail(url="https://cdn.discordapp.com/emojis/575642684006334464.png?size=80")
-        data = await over2000(data, gameNames)
+        data = await over2000(data, gameNames, args)
     await ctx.send(content=data, embed=e) if len(data) < 2000 else await ctx.send("Search query is too vague, there are too many results to show")
 
 @bot.command(name='tool', help='Checks if a game have a guide, cam or works with UUU. ex: !tool cyberpunk')
@@ -516,13 +552,13 @@ async def tool(ctx, *args):
             data += guides + "---- Cheats\n" if len(cheats) > 0 else guides
         if len(cheats) > 0:
             data += cheats
-        if len(data) == 0: data = "Not Found"
+        if len(data) == 0: data = random.choice(notFound).format(' '.join(args))
         # e = discord.Embed(title="FRAMED. Screenshot Community",
         #                   url="https://framedsc.github.io/index.htm",
         #                   description="© 2019-2021 FRAMED. All rights reserved. ",
         #                   color=0x9a9a9a)
         # e.set_thumbnail(url="https://cdn.discordapp.com/emojis/575642684006334464.png?size=80")
-        data = await over2000(data, camGameNames + uuuGameNames + guideGameNames + cheatGameNames)
+        data = await over2000(data, camGameNames + uuuGameNames + guideGameNames + cheatGameNames, args)
     await ctx.send(content=data) if len(data) < 2000 else await ctx.send("Search query is too vague, there are too many results to show") # + str(len(data))
 
 @bot.command(name='tools', help='Alias for !tool, because a lotta people does the mistake lol')
