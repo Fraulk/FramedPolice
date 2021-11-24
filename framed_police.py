@@ -347,6 +347,17 @@ async def on_message(message):
         return
 
 @bot.event
+async def on_message_edit(before, after):
+    await bot.process_commands(after)
+    if after.content.lower() == "good bot":
+        await after.add_reaction('<:catblobheart:822464758530965546>')
+    elif after.content.lower() == "bad bot":
+        await after.add_reaction('<:angery:774364490057515058>')
+        await slap(after)
+    else:
+        return
+
+@bot.event
 async def on_message_delete(message):
     if message.channel.id != SYSChannel:
         return
