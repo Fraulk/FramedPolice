@@ -95,6 +95,14 @@ badBot = {
         },
     }
 
+
+gifs = [
+    "https://discord.com/channels/549986543650078722/549986543650078725/893340504719249429",
+    "https://tenor.com/view/the-rock-dwayne-johnson-dwayne-the-rock-tea-joe-moment-gif-22606108",
+    "https://tenor.com/view/rock-one-eyebrow-raised-rock-staring-the-rock-gif-22113367",
+    "https://tenor.com/view/i-was-acting-gif-23414661",
+]
+
 notFound = [
     "I couldn't find anything for `{}`.",
     "There doesn't seem to be anything for `{}`.",
@@ -311,18 +319,21 @@ async def over2000(data, gameNames, query):
     return data
 
 async def slap(message):
-    badGuy = requests.get(message.author.avatar, stream=True).raw
-    memePath, memeInfo = random.choice(list(badBot.items()))
-    meme = Image.open('images/' + memePath + '.jpg').convert('RGB')
-    botImg = Image.open('images/bot.jpg')
-    botImg.thumbnail(memeInfo['size'], Image.ANTIALIAS)
-    badGuy = Image.open(badGuy)
-    badGuy.thumbnail(memeInfo['size'], Image.ANTIALIAS)
-    memeCopy = meme.copy()
-    memeCopy.paste(botImg, memeInfo['botPosition'])
-    memeCopy.paste(badGuy, memeInfo['badPosition'])
-    memeCopy.save('./temp.jpg', quality=95)
-    await message.reply(file=discord.File('temp.jpg'))
+    if random.randint(0, 9) < 2:
+        await message.reply(random.choice(gifs))
+    else:
+        badGuy = requests.get(message.author.avatar, stream=True).raw
+        memePath, memeInfo = random.choice(list(badBot.items()))
+        meme = Image.open('images/' + memePath + '.jpg').convert('RGB')
+        botImg = Image.open('images/bot.jpg')
+        botImg.thumbnail(memeInfo['size'], Image.ANTIALIAS)
+        badGuy = Image.open(badGuy)
+        badGuy.thumbnail(memeInfo['size'], Image.ANTIALIAS)
+        memeCopy = meme.copy()
+        memeCopy.paste(botImg, memeInfo['botPosition'])
+        memeCopy.paste(badGuy, memeInfo['badPosition'])
+        memeCopy.save('./temp.jpg', quality=95)
+        await message.reply(file=discord.File('temp.jpg'))
 
 @bot.event
 async def on_ready():
@@ -556,14 +567,16 @@ async def tool(ctx, *args):
         cheats, cheatGameNames = await getCheats(args)
         data = ""
         if len(cams) > 0:
-            data += cams + "---- UUU\n" if len(uuus) > 0 or len(guides) > 0 or len(cheats) > 0 else cams
+            data += cams + "----\n" if len(uuus) > 0 or len(guides) > 0 or len(cheats) > 0 else cams
         if len(uuus) > 0:
-            data += uuus + "---- Guides\n" if len(guides) > 0 or len(cheats) > 0 else uuus
+            data += uuus + "----\n" if len(guides) > 0 or len(cheats) > 0 else uuus
         if len(guides) > 0:
-            data += guides + "---- Cheats\n" if len(cheats) > 0 else guides
+            data += guides + "----\n" if len(cheats) > 0 else guides
         if len(cheats) > 0:
             data += cheats
         if len(data) == 0: data = random.choice(notFound).format(' '.join(args))
+        if random.randint(0, 9) <= 1:
+             data += "\n**╘** : <https://discord.com/channels/549986543650078722/549986543650078725/893340504719249429>"
         # e = discord.Embed(title="FRAMED. Screenshot Community",
         #                   url="https://framedsc.github.io/index.htm",
         #                   description="© 2019-2021 FRAMED. All rights reserved. ",
