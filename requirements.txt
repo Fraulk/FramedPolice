@@ -2,4 +2,4 @@ python-dotenv
 discord
 requests
 firebase_admin
-PIL
+Pillow

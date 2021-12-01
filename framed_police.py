@@ -95,12 +95,12 @@ badBot = {
         },
     }
 
-
 gifs = [
     "https://discord.com/channels/549986543650078722/549986543650078725/893340504719249429",
     "https://tenor.com/view/the-rock-dwayne-johnson-dwayne-the-rock-tea-joe-moment-gif-22606108",
     "https://tenor.com/view/rock-one-eyebrow-raised-rock-staring-the-rock-gif-22113367",
     "https://tenor.com/view/i-was-acting-gif-23414661",
+    "https://tenor.com/view/bonk-gif-19410756",
 ]
 
 notFound = [
@@ -256,11 +256,25 @@ async def getGuides(args):
     args = args.replace("'", "\\'")
     responseAL = requests.get('https://framedsc.github.io/A-L.htm')
     responseMZ = requests.get('https://framedsc.github.io/M-Z.htm')
+    responseGeneralGuides = requests.get('https://framedsc.github.io/GeneralGuides/index.htm')
+    responseGeneralGuidesAdv = requests.get('https://framedsc.github.io/GeneralGuidesAdvanced.htm')
+    responseReshadeGuides = requests.get('https://framedsc.github.io/ReshadeGuides/index.htm')
+    responseReshadeShaderGuides = requests.get('https://framedsc.github.io/ReshadeGuidesShaderguides.htm')
     assert responseAL.status_code == 200, 'Wrong status code'
     assert responseMZ.status_code == 200, 'Wrong status code'
-    responses = str(responseAL.content) + str(responseMZ.content)
+    assert responseGeneralGuides.status_code == 200, 'Wrong status code'
+    assert responseGeneralGuidesAdv.status_code == 200, 'Wrong status code'
+    assert responseReshadeGuides.status_code == 200, 'Wrong status code'
+    assert responseReshadeShaderGuides.status_code == 200, 'Wrong status code'
+    responses = str(responseAL.content)
+    responses += str(responseMZ.content)
+    responses += str(responseGeneralGuides.content)
+    responses += str(responseGeneralGuidesAdv.content)
+    responses += str(responseReshadeGuides.content)
+    responses += str(responseReshadeShaderGuides.content)
     normalizedList = re.sub(r'\\t|\\n|\\r', '\n', responses)
-    guides = re.finditer(r'"><a href="(GameGuides\/.*\.htm)">(.*)<\/a>', normalizedList, flags=re.M)
+    guidesRegex = r'"><a href="(GameGuides\/.*\.htm|..\/ReshadeGuides\/.*\.htm|..\/GeneralGuides\/.*\.htm|ReshadeGuides\/Shaders\/.*\.htm)">(.*)<\/a>'
+    guides = re.finditer(guidesRegex, normalizedList, flags=re.M)
     guideLinks = []
     guideNames = []
     for matchNum, match in enumerate(guides, start=1):
