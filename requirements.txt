@@ -1,5 +1,5 @@
 python-dotenv
-discord
+git+https://github.com/Rapptz/discord.py
 requests
 firebase_admin
 Pillow

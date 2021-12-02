@@ -13,6 +13,7 @@ from dotenv import load_dotenv
 from discord.ext import commands
 from firebase_admin import credentials
 
+# pip install -U git+https://github.com/Rapptz/discord.py
 load_dotenv()
 API_KEY = os.getenv("API_KEY")
 DB_URL = os.getenv("DB_URL")
@@ -95,12 +96,90 @@ badBot = {
         },
     }
 
-gifs = [
+badGifs = [
     "https://discord.com/channels/549986543650078722/549986543650078725/893340504719249429",
     "https://tenor.com/view/the-rock-dwayne-johnson-dwayne-the-rock-tea-joe-moment-gif-22606108",
     "https://tenor.com/view/rock-one-eyebrow-raised-rock-staring-the-rock-gif-22113367",
     "https://tenor.com/view/i-was-acting-gif-23414661",
     "https://tenor.com/view/bonk-gif-19410756",
+]
+
+badReaction = [
+    "<:angery:774364490057515058>",
+    "<:FrogMan:550964011081007104>",
+    "<:shrek:907243907513991188>",
+    "<a:angrysmash:731197915581776156>",
+    "<:catwtf:882606420686684161>",
+    "<a:blink:750012630030221332>",
+    "<:blobNO:613463993058852865>",
+    "<a:blobangryAnim:551112353236779029>",
+]
+
+hornyBot = {
+    'bonk': {
+            'size': (128, 128),
+            'botPosition': (400, 100),
+            'badPosition': (1050, 500)
+        },
+}
+
+hornyGifs = [
+    "https://tenor.com/view/horny-jail-bonk-dog-hit-head-stop-being-horny-gif-17298755",
+    "https://tenor.com/view/bonk-gif-19410756",
+    "https://tenor.com/view/zhongli-genshin-impact-bonk-horny-jail-meteor-gif-20675806",
+    "https://imgur.com/2QyYLP7",
+    "https://tenor.com/view/listen-here-you-little-shit-bird-meme-bird-listen-here-you-little-shit-gif-19221308",
+    "https://tenor.com/view/yes-yes-yes-gif-22948122",
+    "https://tenor.com/view/nani-hmm-intensifies-jojos-bizarre-encyclopedia-triggered-anime-gif-9845045"
+]
+
+hornyReaction = [
+    "<:judyTease:799286516965703700>",
+    "<a:angrysmash:731197915581776156>",
+    "<a:bonk:898191413622210581>",
+    "<:catwtf:882606420686684161>",
+    "<:nou:869265435676254228>",
+    "<a:teasing:852712400914612264>",
+]
+
+goodBot = {
+    'duck_puppy': {
+            'size': (50, 50),
+            'botPosition': (80, 120),
+            'badPosition': (180, 110)
+        },
+    'goose_retriever': {
+            'size': (100, 100),
+            'botPosition': (420, 210),
+            'badPosition': (500, 30)
+        },
+    'old_lady': {
+            'size': (80, 80),
+            'botPosition': (290, 180),
+            'badPosition': (10, 0)
+        },
+    'retriever': {
+            'size': (80, 80),
+            'botPosition': (280, 180),
+            'badPosition': (80, 210)
+        },
+}
+
+goodGifs = [
+    "https://tenor.com/view/kya_cute_k_timi-cutie-kando_kha_muji-khatey-muji-gif-21747239",
+    "https://tenor.com/view/kith-cat-wholesome-chungus-valorant-gif-20521962",
+    "https://tenor.com/view/kitten-love-luv-u-please-notice-me-gif-11462572",
+]
+
+goodReaction = [
+    "<:catblobheart:822464758530965546>",
+    "<a:gandalf:551112351986876447>",
+    "<:PraiseTheSun:553217550813757451>",
+    "<a:faceheart:852713931327275028>",
+    "<a:HyperPartyBlobAnim:555409742579630090>", 
+    "<a:catcoffee:862103121572003841>", 
+    "<:heartinf:885091024232407071> ",
+    "<a:trulyamazingAnim:602947248048832565>",
 ]
 
 notFound = [
@@ -332,12 +411,15 @@ async def over2000(data, gameNames, query):
         return response
     return data
 
-async def slap(message):
-    if random.randint(0, 9) < 2:
+async def react(message, reason):
+    percentage = 2 if reason == "bad" else 5 if reason == "good" else 6 if reason == "horny" else 2
+    if random.randint(0, 9) < percentage:
+        gifs = badGifs if reason == "bad" else goodGifs if reason == "good" else hornyGifs
         await message.reply(random.choice(gifs))
     else:
         badGuy = requests.get(message.author.avatar, stream=True).raw
-        memePath, memeInfo = random.choice(list(badBot.items()))
+        botImg = badBot if reason == "bad" else goodBot if reason == "good" else hornyBot
+        memePath, memeInfo = random.choice(list(botImg.items()))
         meme = Image.open('images/' + memePath + '.jpg').convert('RGB')
         botImg = Image.open('images/bot.jpg')
         botImg.thumbnail(memeInfo['size'], Image.ANTIALIAS)
@@ -364,10 +446,14 @@ async def on_message(message):
     elif message.channel.id == IntroChannel:
         await startThread(message)
     elif message.content.lower() == "good bot":
-        await message.add_reaction('<:catblobheart:822464758530965546>')
+        await message.add_reaction(random.choice(goodReaction))
+        await react(message, "good")
     elif message.content.lower() == "bad bot":
-        await message.add_reaction('<:angery:774364490057515058>')
-        await slap(message)
+        await message.add_reaction(random.choice(badReaction))
+        await react(message, "bad")
+    elif message.content.lower() == "horny bot":
+        await message.add_reaction(random.choice(hornyReaction))
+        await react(message, "horny")
     else:
         return
 
@@ -375,10 +461,14 @@ async def on_message(message):
 async def on_message_edit(before, after):
     await bot.process_commands(after)
     if after.content.lower() == "good bot":
-        await after.add_reaction('<:catblobheart:822464758530965546>')
+        await after.add_reaction(random.choice(goodReaction))
+        await react(after, "good")
     elif after.content.lower() == "bad bot":
-        await after.add_reaction('<:angery:774364490057515058>')
-        await slap(after)
+        await after.add_reaction(random.choice(badReaction))
+        await react(after, "bad")
+    elif after.content.lower() == "horny bot":
+        await after.add_reaction(random.choice(hornyReaction))
+        await react(after, "horny")
     else:
         return
 
