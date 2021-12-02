@@ -5,6 +5,7 @@ import pickle
 import random
 import discord
 import datetime
+from discord import embeds
 import requests
 import firebase_admin
 from PIL import Image
@@ -13,30 +14,19 @@ from dotenv import load_dotenv
 from discord.ext import commands
 from firebase_admin import credentials
 
+from vars import *
+from functions import *
+
 # pip install -U git+https://github.com/Rapptz/discord.py
 load_dotenv()
 API_KEY = os.getenv("API_KEY")
-DB_URL = os.getenv("DB_URL")
-cred = credentials.Certificate("./secret.json")
-SLapp = firebase_admin.initialize_app(cred, {'databaseURL': DB_URL})
-ref = db.reference("/")
+# DB_URL = os.getenv("DB_URL")
+# cred = credentials.Certificate("./secret.json")
+# SLapp = firebase_admin.initialize_app(cred, {'databaseURL': DB_URL})
+# ref = db.reference("/")
 intents = discord.Intents.default()
 intents.members = True
-bot = commands.Bot(command_prefix='!', intents=intents)
-PROD = True
-# 86400 : 24h
-# 43200 : 12h
-# Test channel : 873627093840314401
-# Framed channel : 549986930071175169
-DELAY = 43200
-LIMIT = 5
-WelcomeRole = 873297069715099721 if PROD else 898969812254990367
-PadawanRole = 872825204869582869 if PROD else 899266723906220042
-JoinedChannel = 873242046675169310 if PROD else 874368324023255131
-LeftChannel = 873242046675169310 if PROD else 874368324023255131
-SYSChannel = 549986930071175169 if PROD else 873627093840314401
-SLChannel = 859492383845646346 if PROD else 889793521106714634
-IntroChannel = 872825951011082291 if PROD else 898977778039390268
+bot = commands.Bot(command_prefix='!', intents=intents, help_command=None)
 
 class UserMessage:
     def __init__(self, id, name, time, count, reachedLimit):
@@ -47,158 +37,6 @@ class UserMessage:
         self.reachedLimit = reachedLimit
 
 usersMessages = []
-
-badBot = {
-        'batmanSlap': {
-            'size': (75, 75),
-            'botPosition': (265, 30),
-            'badPosition': (132, 100)
-        },
-        'pepeSlap': {
-            'size': (100, 100),
-            'botPosition': (80, 290),
-            'badPosition': (-100, -100)
-        },
-        'kermitSlap': {
-            'size': (128, 128),
-            'botPosition': (690, 320),
-            'badPosition': (-200, -200)
-        },
-        'humanSlap': {
-            'size': (128, 128),
-            'botPosition': (690, 90),
-            'badPosition': (160, 90)
-        },
-        'drawSlap': {
-            'size': (128, 128),
-            'botPosition': (250, 30),
-            'badPosition': (50, 240)
-        },
-        'terminatorSlap': {
-            'size': (35, 35),
-            'botPosition': (175, 20),
-            'badPosition': (20, 90)
-        },
-        'seifieldSlap': {
-            'size': (100, 100),
-            'botPosition': (220, 70),
-            'badPosition': (-100, -100)
-        },
-        'catSlap': {
-            'size': (60, 60),
-            'botPosition': (245, 70),
-            'badPosition': (115, 150)
-        },
-        'woomanSlap': {
-            'size': (100, 100),
-            'botPosition': (450, 430),
-            'badPosition': (370, 90)
-        },
-    }
-
-badGifs = [
-    "https://discord.com/channels/549986543650078722/549986543650078725/893340504719249429",
-    "https://tenor.com/view/the-rock-dwayne-johnson-dwayne-the-rock-tea-joe-moment-gif-22606108",
-    "https://tenor.com/view/rock-one-eyebrow-raised-rock-staring-the-rock-gif-22113367",
-    "https://tenor.com/view/i-was-acting-gif-23414661",
-    "https://tenor.com/view/bonk-gif-19410756",
-]
-
-badReaction = [
-    "<:angery:774364490057515058>",
-    "<:FrogMan:550964011081007104>",
-    "<:shrek:907243907513991188>",
-    "<a:angrysmash:731197915581776156>",
-    "<:catwtf:882606420686684161>",
-    "<a:blink:750012630030221332>",
-    "<:blobNO:613463993058852865>",
-    "<a:blobangryAnim:551112353236779029>",
-]
-
-hornyBot = {
-    'bonk': {
-            'size': (128, 128),
-            'botPosition': (400, 100),
-            'badPosition': (1050, 500)
-        },
-}
-
-hornyGifs = [
-    "https://tenor.com/view/horny-jail-bonk-dog-hit-head-stop-being-horny-gif-17298755",
-    "https://tenor.com/view/bonk-gif-19410756",
-    "https://tenor.com/view/zhongli-genshin-impact-bonk-horny-jail-meteor-gif-20675806",
-    "https://imgur.com/2QyYLP7",
-    "https://tenor.com/view/listen-here-you-little-shit-bird-meme-bird-listen-here-you-little-shit-gif-19221308",
-    "https://tenor.com/view/yes-yes-yes-gif-22948122",
-    "https://tenor.com/view/nani-hmm-intensifies-jojos-bizarre-encyclopedia-triggered-anime-gif-9845045"
-]
-
-hornyReaction = [
-    "<:judyTease:799286516965703700>",
-    "<a:angrysmash:731197915581776156>",
-    "<a:bonk:898191413622210581>",
-    "<:catwtf:882606420686684161>",
-    "<:nou:869265435676254228>",
-    "<a:teasing:852712400914612264>",
-]
-
-goodBot = {
-    'duck_puppy': {
-            'size': (50, 50),
-            'botPosition': (80, 120),
-            'badPosition': (180, 110)
-        },
-    'goose_retriever': {
-            'size': (100, 100),
-            'botPosition': (420, 210),
-            'badPosition': (500, 30)
-        },
-    'old_lady': {
-            'size': (80, 80),
-            'botPosition': (290, 180),
-            'badPosition': (10, 0)
-        },
-    'retriever': {
-            'size': (80, 80),
-            'botPosition': (280, 180),
-            'badPosition': (80, 210)
-        },
-}
-
-goodGifs = [
-    "https://tenor.com/view/kya_cute_k_timi-cutie-kando_kha_muji-khatey-muji-gif-21747239",
-    "https://tenor.com/view/kith-cat-wholesome-chungus-valorant-gif-20521962",
-    "https://tenor.com/view/kitten-love-luv-u-please-notice-me-gif-11462572",
-]
-
-goodReaction = [
-    "<:catblobheart:822464758530965546>",
-    "<a:gandalf:551112351986876447>",
-    "<:PraiseTheSun:553217550813757451>",
-    "<a:faceheart:852713931327275028>",
-    "<a:HyperPartyBlobAnim:555409742579630090>", 
-    "<a:catcoffee:862103121572003841>", 
-    "<:heartinf:885091024232407071> ",
-    "<a:trulyamazingAnim:602947248048832565>",
-]
-
-notFound = [
-    "I couldn't find anything for `{}`.",
-    "There doesn't seem to be anything for `{}`.",
-    "It looks like there's nothing for `{}`."
-]
-
-tooVague = [
-    "I found too many results for `{}` ! Did you mean : ",
-    "`{}` is too vague, were you looking for : "
-]
-
-found = [
-    "Found these for ya!",
-    "Were you looking for these?",
-    "Hope these help!",
-    "I managed to get these for you!"
-]
 
 async def checkMessage(message):
     userId = message.author.id
@@ -264,172 +102,6 @@ async def secondLook(message):
     await bot.get_channel(SLChannel).send(f"Here is your link : https://second-look.netlify.app?id={message.author.id}")
     print("---------------------------------------- Building ended")
     ref.child(str(message.author.id)).set(userDict)
-
-async def getCams(args):
-    response = requests.get('https://docs.google.com/spreadsheet/ccc?key=1lnM2SM_RBzqile870zG70E39wuuseqQE0AaPW-P1p5E&output=csv')
-    assert response.status_code == 200, 'Wrong status code'
-    # print(response.content)
-    spreadData = str(response.content).split('\\r\\n')
-    spreadData.pop(0)
-    matched_lines = []
-    line_index = 0
-    args = ' '.join(args)
-    args = args.replace("'", "\\'")
-    for line in spreadData:
-        if str(args).lower() in line.lower().split(',')[0]:
-            next_index = 1
-            if line.find(',') > -1:
-                matched_lines += [line]
-            if(spreadData[line_index + next_index] == ''): next_index += 1
-            while (line_index + next_index < len(spreadData) 
-                    and spreadData[line_index + next_index].split(',')[0] == ''):
-                if spreadData[line_index + next_index].split(',')[1].startswith('http'):
-                    matched_lines += [spreadData[line_index + next_index]]
-                next_index += 1
-        line_index += 1
-    data = ''
-    gameNames = []
-    for item in matched_lines:
-        line_note = ""
-        if item.split(',')[2] != "":
-            first_two_length = len(item.split(',')[0]) + len(item.split(',')[1])
-            line_note = " *(" + item[item.find('"', first_two_length + 1):-1] + ")*" if '"' in item.split(',')[2] else " *(" + item.split(',')[2] + ")*"
-            line_note = line_note.replace("\\n", "\n\t")
-            line_note = line_note.replace('"', "")
-        if item.split(',')[1].startswith('"'):
-            for el in item.split(',')[1].strip('"').split('\\n'):
-                data += item.split(',')[0] + " : " + el + line_note + "\n"
-            continue
-        data += "**" + item.split(',')[0] + "** : <" + item.split(',')[1] + ">" + line_note + "\n" if item.split(',')[0] != "" else "**╘** : <" + item.split(',')[1] + ">" + line_note + "\n"
-        gameNames.append(item.split(',')[0])
-    gameNames[:] = ["**" + x + "**" for x in gameNames if x]
-    return data, gameNames
-
-async def getUUU(args):
-    args = ' '.join(args)
-    args = args.replace("'", "\\'")
-    response = requests.get('https://framedsc.github.io/GeneralGuides/universal_ue4_consoleunlocker.htm')
-    assert response.status_code == 200, 'Wrong status code'
-    # print(response.content)
-    gamesListPage = re.findall(r'(?s)known to work with the unlocker.*Additionally, mos', str(response.content), flags=re.S | re.M)
-    normalizedList = re.sub(r'<code>|<\/code>', '', gamesListPage[0])
-    normalizedList = re.sub(r'\\t\\n', '', normalizedList)
-    normalizedList = re.sub(r'timestop/pause', 'timestop & pause', normalizedList)
-    normalizedList = re.sub(r'Gamepass / MS', 'Gamepass & MS', normalizedList)
-    normalizedList = re.sub(r'console/timestop', 'console & timestop', normalizedList)
-    games = re.finditer(r'<td>([\(\)&\+\,\.\':-`-\w\s^\\t]*)<\/td>', normalizedList, flags=0)
-    gameList = []
-    data = ""
-    gameNames = []
-    for matchNum, match in enumerate(games, start=1):
-        gameList.append(match.group(1))
-        arg = args.lower()
-    for index, game in enumerate(gameList):
-        if arg in game.lower() and index % 2 == 0:
-            data += "**" + gameList[index] + "** works with UUU. Notes : " + gameList[index+1] + "\n" if gameList[index+1] != '' else "**" + gameList[index] + "** works with UUU\n"
-            gameNames.append("**" + gameList[index] + "**")
-    return data, gameNames
-
-async def getGuides(args):
-    args = ' '.join(args)
-    args = args.replace("'", "\\'")
-    responseAL = requests.get('https://framedsc.github.io/A-L.htm')
-    responseMZ = requests.get('https://framedsc.github.io/M-Z.htm')
-    responseGeneralGuides = requests.get('https://framedsc.github.io/GeneralGuides/index.htm')
-    responseGeneralGuidesAdv = requests.get('https://framedsc.github.io/GeneralGuidesAdvanced.htm')
-    responseReshadeGuides = requests.get('https://framedsc.github.io/ReshadeGuides/index.htm')
-    responseReshadeShaderGuides = requests.get('https://framedsc.github.io/ReshadeGuidesShaderguides.htm')
-    assert responseAL.status_code == 200, 'Wrong status code'
-    assert responseMZ.status_code == 200, 'Wrong status code'
-    assert responseGeneralGuides.status_code == 200, 'Wrong status code'
-    assert responseGeneralGuidesAdv.status_code == 200, 'Wrong status code'
-    assert responseReshadeGuides.status_code == 200, 'Wrong status code'
-    assert responseReshadeShaderGuides.status_code == 200, 'Wrong status code'
-    responses = str(responseAL.content)
-    responses += str(responseMZ.content)
-    responses += str(responseGeneralGuides.content)
-    responses += str(responseGeneralGuidesAdv.content)
-    responses += str(responseReshadeGuides.content)
-    responses += str(responseReshadeShaderGuides.content)
-    normalizedList = re.sub(r'\\t|\\n|\\r', '\n', responses)
-    guidesRegex = r'"><a href="(GameGuides\/.*\.htm|..\/ReshadeGuides\/.*\.htm|..\/GeneralGuides\/.*\.htm|ReshadeGuides\/Shaders\/.*\.htm)">(.*)<\/a>'
-    guides = re.finditer(guidesRegex, normalizedList, flags=re.M)
-    guideLinks = []
-    guideNames = []
-    for matchNum, match in enumerate(guides, start=1):
-        guideLinks.append(match.group(1))
-        guideNames.append(match.group(2))
-    arg = args.lower()
-    data = ""
-    gameNames = []
-    for index, game in enumerate(guideNames):
-        if arg in game.lower():
-            data += "**" + guideNames[index] + "** : <https://framedsc.github.io/" + guideLinks[index] + ">\n"
-            gameNames.append("**" + guideNames[index] + "**")
-    return data, gameNames
-
-async def getCheats(args):
-    args = ' '.join(args)
-    # args = args.replace("'", "\\'")
-    response = requests.get("https://framedsc.github.io/cheattablearchive.htm", allow_redirects=True)
-    assert response.status_code == 200, 'Wrong status code'
-    cheats = re.finditer(r'^<h3.*?>(.*?)<.*?<\/ul', response.text, flags=re.S | re.M)
-    cheatsName = []
-    cheatsContent = []
-    data = ""
-    gameNames = []
-    for matchNum, match in enumerate(cheats, start=1):
-        cheatsName.append(match.group(1))
-        cheatsContent.append(match.group(0))
-    arg = args.lower()
-    for index, cheat in enumerate(cheatsName):
-        if arg in cheat.lower():
-            if cheat.find("(") > -1:
-                cheat = cheat[:-2]
-            data += "**" + cheat + "** : "
-            gameNames.append("**" + cheat + "**")
-            cheatsRegex = re.finditer(r'(CheatTables\/Archive\/.*\.(?:CT|ct))">', cheatsContent[index])
-            for matchNum2, match2 in enumerate(cheatsRegex, start=1):
-                data += "<https://framedsc.github.io/" + match2.group(1) + ">\n" if matchNum2 == 1 else "\t**╘** : <https://framedsc.github.io/" + match2.group(1) + ">\n"
-    return data, gameNames
-
-async def startThread(message):
-    title = f"Hello There, {message.author.name}"
-    thread = await message.channel.create_thread(name=title, message=message, reason="Thread created for new member")
-    await thread.send("https://tenor.com/view/hello-there-general-kenobi-gif-18841535")
-    await message.author.remove_roles(message.author.guild.get_role(WelcomeRole))
-    await message.author.add_roles(message.author.guild.get_role(PadawanRole))
-
-async def over2000(data, gameNames, query):
-    isOver2000 = len(data) > 2000
-    if(isOver2000):
-        # response = "Search query is too vague, there are too many results to show.\n" + str(len(gameNames)) + " games corresponds to your query, please retype the command with one of them : \n"
-        response = random.choice(tooVague).format(' '.join(query))
-        response += "  |  ".join([name for name in gameNames])
-        if(len(gameNames) > 15):
-            response = "I found too many results for `{}` ! Please be more specific !".format(' '.join(query))
-        return response
-    return data
-
-async def react(message, reason):
-    percentage = 2 if reason == "bad" else 5 if reason == "good" else 6 if reason == "horny" else 2
-    if random.randint(0, 9) < percentage:
-        gifs = badGifs if reason == "bad" else goodGifs if reason == "good" else hornyGifs
-        await message.reply(random.choice(gifs))
-    else:
-        badGuy = requests.get(message.author.avatar, stream=True).raw
-        botImg = badBot if reason == "bad" else goodBot if reason == "good" else hornyBot
-        memePath, memeInfo = random.choice(list(botImg.items()))
-        meme = Image.open('images/' + memePath + '.jpg').convert('RGB')
-        botImg = Image.open('images/bot.jpg')
-        botImg.thumbnail(memeInfo['size'], Image.ANTIALIAS)
-        badGuy = Image.open(badGuy)
-        badGuy.thumbnail(memeInfo['size'], Image.ANTIALIAS)
-        memeCopy = meme.copy()
-        memeCopy.paste(botImg, memeInfo['botPosition'])
-        memeCopy.paste(badGuy, memeInfo['badPosition'])
-        memeCopy.save('./temp.jpg', quality=95)
-        await message.reply(file=discord.File('temp.jpg'))
 
 @bot.event
 async def on_ready():
@@ -632,7 +304,7 @@ async def uuu(ctx, *args):
                           url="https://framedsc.github.io/index.htm",
                           description="© 2019-2021 FRAMED. All rights reserved. ",
                           color=0x9a9a9a)
-        e.set_thumbnail(url="https://cdn.discordapp.com/emojis/575642684006334464.png?size=80")
+        e.set_thumbnail(url="https://cdn.discordapp.com/emojis/575642684006334464.png?size=128")
         data = await over2000(data, gameNames, args)
     await ctx.send(content=data, embed=e) if len(data) < 2000 else await ctx.send("Search query is too vague, there are too many results to show")
 
@@ -645,7 +317,7 @@ async def guide(ctx, *args):
                           url="https://framedsc.github.io/index.htm",
                           description="© 2019-2021 FRAMED. All rights reserved. ",
                           color=0x9a9a9a)
-        e.set_thumbnail(url="https://cdn.discordapp.com/emojis/575642684006334464.png?size=80")
+        e.set_thumbnail(url="https://cdn.discordapp.com/emojis/575642684006334464.png?size=128")
         data = await over2000(data, gameNames, args)
     await ctx.send(content=data, embed=e) if len(data) < 2000 else await ctx.send("Search query is too vague, there are too many results to show")
 
@@ -658,7 +330,7 @@ async def cheat(ctx, *args):
                           url="https://framedsc.github.io/index.htm",
                           description="© 2019-2021 FRAMED. All rights reserved. ",
                           color=0x9a9a9a)
-        e.set_thumbnail(url="https://cdn.discordapp.com/emojis/575642684006334464.png?size=80")
+        e.set_thumbnail(url="https://cdn.discordapp.com/emojis/575642684006334464.png?size=128")
         data = await over2000(data, gameNames, args)
     await ctx.send(content=data, embed=e) if len(data) < 2000 else await ctx.send("Search query is too vague, there are too many results to show")
 
@@ -685,7 +357,7 @@ async def tool(ctx, *args):
         #                   url="https://framedsc.github.io/index.htm",
         #                   description="© 2019-2021 FRAMED. All rights reserved. ",
         #                   color=0x9a9a9a)
-        # e.set_thumbnail(url="https://cdn.discordapp.com/emojis/575642684006334464.png?size=80")
+        # e.set_thumbnail(url="https://cdn.discordapp.com/emojis/575642684006334464.png?size=128")
         data = await over2000(data, camGameNames + uuuGameNames + guideGameNames + cheatGameNames, args)
     await ctx.send(content=data) if len(data) < 2000 else await ctx.send("Search query is too vague, there are too many results to show") # + str(len(data))
 
