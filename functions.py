@@ -152,17 +152,18 @@ async def over2000(data, gameNames, query):
         return response
     return data
 
-async def react(message, reason):
+async def react(message, reason, botAvatar):
     percentage = 2 if reason == "bad" else 5 if reason == "good" else 6 if reason == "horny" else 2
     if random.randint(0, 9) < percentage:
         gifs = badGifs if reason == "bad" else goodGifs if reason == "good" else hornyGifs
         await message.reply(random.choice(gifs))
     else:
         badGuy = requests.get(message.author.avatar, stream=True).raw
+        botPfp = requests.get(botAvatar, stream=True).raw
         botImg = badBot if reason == "bad" else goodBot if reason == "good" else hornyBot
         memePath, memeInfo = random.choice(list(botImg.items()))
         meme = Image.open('images/' + memePath + '.jpg').convert('RGB')
-        botImg = Image.open('images/bot.jpg')
+        botImg = Image.open(botPfp)
         botImg.thumbnail(memeInfo['size'], Image.ANTIALIAS)
         badGuy = Image.open(badGuy)
         badGuy.thumbnail(memeInfo['size'], Image.ANTIALIAS)

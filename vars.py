@@ -164,3 +164,62 @@ found = [
     "Hope these help!",
     "I managed to get these for you!"
 ]
+
+helpMsg = {
+    'check': {
+        'name': '!check',
+        'description': 'Shows data about you'
+    },
+    'cam': {
+        'name': '!cam [name]',
+        'description': 'Search for a freecams or a tool by string. ex: !cam cyberpunk 2077'
+    },
+    'guide': {
+        'name': '!guide [name]',
+        'description': 'Checks if a game have a guide on the site. ex: !guide cyberpunk'
+    },
+    'uuu': {
+        'name': '!uuu [name]',
+        'description': 'Checks if a game is compatible with UUU or have a guide on the site. ex: !uuu the ascent'
+    },
+    'cheat': {
+        'name': '!cheat [name]',
+        'description': 'Checks if a game have cheat tables on the site. ex: !cheat alien'
+    },
+    'tool': {
+        'name': '!tool(s) [name]',
+        'description': 'Checks if a game have a guide, cam or works with UUU. ex: !tool cyberpunk'
+    },
+    'changeDelay': {
+        'name': '!changeDelay [seconds]',
+        'description': 'Change the delay after reaching the limit for posting shots, with number of seconds'
+    },
+    'changeLimit': {
+        'name': '!changeLimit [number]',
+        'description': 'Change the limit for posting shots'
+    },
+    'currentValue': {
+        'name': '!currentValue',
+        'description': 'Shows the current values for DELAY and LIMIT'
+    },
+    'dump': {
+        'name': '!dump',
+        'description': 'Shows data about everybody'
+    },
+    'dumpR': {
+        'name': '!dumpR',
+        'description': 'Shows data about those who reached the limit and have been dm\'d by the bot'
+    },
+    'reset': {
+        'name': '!reset [userID]',
+        'description': 'Resets the count for a person, with his ID as parameter'
+    },
+    'resetAll': {
+        'name': '!resetAll',
+        'description': 'Resets the count for everyone'
+    },
+    'special': {
+        'name': 'Special reaction',
+        'description': 'The bot has special reaction for some query : "good|bad|horny bot"'
+    },
+}

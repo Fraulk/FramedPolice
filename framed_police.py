@@ -20,10 +20,10 @@ from functions import *
 # pip install -U git+https://github.com/Rapptz/discord.py
 load_dotenv()
 API_KEY = os.getenv("API_KEY")
-# DB_URL = os.getenv("DB_URL")
-# cred = credentials.Certificate("./secret.json")
-# SLapp = firebase_admin.initialize_app(cred, {'databaseURL': DB_URL})
-# ref = db.reference("/")
+DB_URL = os.getenv("DB_URL")
+cred = credentials.Certificate("./secret.json")
+SLapp = firebase_admin.initialize_app(cred, {'databaseURL': DB_URL})
+ref = db.reference("/")
 intents = discord.Intents.default()
 intents.members = True
 bot = commands.Bot(command_prefix='!', intents=intents, help_command=None)
@@ -119,13 +119,13 @@ async def on_message(message):
         await startThread(message)
     elif message.content.lower() == "good bot":
         await message.add_reaction(random.choice(goodReaction))
-        await react(message, "good")
+        await react(message, "good", bot.user.avatar)
     elif message.content.lower() == "bad bot":
         await message.add_reaction(random.choice(badReaction))
-        await react(message, "bad")
+        await react(message, "bad", bot.user.avatar)
     elif message.content.lower() == "horny bot":
         await message.add_reaction(random.choice(hornyReaction))
-        await react(message, "horny")
+        await react(message, "horny", bot.user.avatar)
     else:
         return
 
@@ -134,13 +134,13 @@ async def on_message_edit(before, after):
     await bot.process_commands(after)
     if after.content.lower() == "good bot":
         await after.add_reaction(random.choice(goodReaction))
-        await react(after, "good")
+        await react(after, "good", bot.user.avatar)
     elif after.content.lower() == "bad bot":
         await after.add_reaction(random.choice(badReaction))
-        await react(after, "bad")
+        await react(after, "bad", bot.user.avatar)
     elif after.content.lower() == "horny bot":
         await after.add_reaction(random.choice(hornyReaction))
-        await react(after, "horny")
+        await react(after, "horny", bot.user.avatar)
     else:
         return
 
@@ -364,6 +364,36 @@ async def tool(ctx, *args):
 @bot.command(name='tools', help='Alias for !tool, because a lotta people does the mistake lol')
 async def tools(ctx, *args):
     await tool(ctx, *args)
+
+@bot.command(name='help')
+async def help(ctx, *args):
+    e = discord.Embed(title="List of commands",
+                      url="https://github.com/Fraulk/FramedPolice",
+                      description="",
+                      color=0x9a9a9a
+    )
+    e.add_field(name=helpMsg['check']['name'], value=helpMsg['check']['description'], inline=False)
+    e.add_field(name=helpMsg['cam']['name'], value=helpMsg['cam']['description'], inline=False)
+    e.add_field(name=helpMsg['guide']['name'], value=helpMsg['guide']['description'], inline=False)
+    e.add_field(name=helpMsg['uuu']['name'], value=helpMsg['uuu']['description'], inline=False)
+    e.add_field(name=helpMsg['cheat']['name'], value=helpMsg['cheat']['description'], inline=False)
+    e.add_field(name=helpMsg['tool']['name'], value=helpMsg['tool']['description'], inline=False)
+    FoudersEd = discord.utils.get(ctx.guild.roles, id=549988038516670506)
+    mods = discord.utils.get(ctx.guild.roles, id=549988228737007638)
+    testFoudersEd = discord.utils.get(ctx.guild.roles, id=874375168204611604)
+    if FoudersEd in ctx.author.roles or mods in ctx.author.roles or testFoudersEd in ctx.author.roles:
+        e.add_field(name=helpMsg['changeDelay']['name'], value=helpMsg['changeDelay']['description'], inline=False)
+        e.add_field(name=helpMsg['changeLimit']['name'], value=helpMsg['changeLimit']['description'], inline=False)
+        e.add_field(name=helpMsg['currentValue']['name'], value=helpMsg['currentValue']['description'], inline=False)
+        e.add_field(name=helpMsg['dump']['name'], value=helpMsg['dump']['description'], inline=False)
+        e.add_field(name=helpMsg['dumpR']['name'], value=helpMsg['dumpR']['description'], inline=False)
+        e.add_field(name=helpMsg['reset']['name'], value=helpMsg['reset']['description'], inline=False)
+        e.add_field(name=helpMsg['resetAll']['name'], value=helpMsg['resetAll']['description'], inline=False)
+    e.add_field(name=helpMsg['special']['name'], value=helpMsg['special']['description'], inline=False)
+    # e.set_image(url="https://cdn.discordapp.com/emojis/575642684006334464.png?size=40")
+    e.set_footer(text="Made by Fraulk", icon_url="https://cdn.discordapp.com/avatars/192300712049246208/a_c7d1c089c53b152ed0b3b00304fa3307.webp?size=40")
+    # does the gif version of my pfp still exists after nitro ends ? https://cdn.discordapp.com/avatars/192300712049246208/a_c7d1c089c53b152ed0b3b00304fa3307.gif?size=40
+    await ctx.send(embed=e)
 
 # BUG : when multiple person spamm shots, sometime the bot ignore the event/code and some shots bypass the limit, it may be caused by the fact that 
 # 1. 6th shot get deleted 2. on_message_delete event then decrease user count 3. bot can't keep up so the limit decrease without increasing first or smthng or some events are simply ignored
