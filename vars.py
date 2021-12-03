@@ -148,7 +148,7 @@ goodReaction = [
     "<a:faceheart:852713931327275028>",
     "<a:HyperPartyBlobAnim:555409742579630090>", 
     "<a:catcoffee:862103121572003841>", 
-    "<:heartinf:885091024232407071> ",
+    "<:heartinf:885091024232407071>",
     "<a:trulyamazingAnim:602947248048832565>",
 ]
 
