@@ -5,10 +5,7 @@ import pickle
 import random
 import discord
 import datetime
-from discord import embeds
-import requests
 import firebase_admin
-from PIL import Image
 from firebase_admin import db
 from dotenv import load_dotenv
 from discord.ext import commands
@@ -365,6 +362,17 @@ async def tool(ctx, *args):
 async def tools(ctx, *args):
     await tool(ctx, *args)
 
+@bot.command(name="bingo", help="Play to the framed bingo !")
+async def bingo(ctx, *args):
+    bingoView = EphemeralBingo()
+    e = discord.Embed(title="Bingo card",
+                      url="https://discord.com/channels/549986543650078722/549986543650078725/914511447176921098",
+                      description="",
+                      color=0x9a9a9a
+    )
+    e.set_image(url="https://cdn.discordapp.com/attachments/549986543650078725/914511446975582218/bingo2.png")
+    await ctx.send("", view=bingoView, embed=e)
+
 @bot.command(name='help')
 async def help(ctx, *args):
     e = discord.Embed(title="List of commands",
@@ -378,17 +386,19 @@ async def help(ctx, *args):
     e.add_field(name=helpMsg['uuu']['name'], value=helpMsg['uuu']['description'], inline=False)
     e.add_field(name=helpMsg['cheat']['name'], value=helpMsg['cheat']['description'], inline=False)
     e.add_field(name=helpMsg['tool']['name'], value=helpMsg['tool']['description'], inline=False)
-    FoudersEd = discord.utils.get(ctx.guild.roles, id=549988038516670506)
-    mods = discord.utils.get(ctx.guild.roles, id=549988228737007638)
-    testFoudersEd = discord.utils.get(ctx.guild.roles, id=874375168204611604)
-    if FoudersEd in ctx.author.roles or mods in ctx.author.roles or testFoudersEd in ctx.author.roles:
-        e.add_field(name=helpMsg['changeDelay']['name'], value=helpMsg['changeDelay']['description'], inline=False)
-        e.add_field(name=helpMsg['changeLimit']['name'], value=helpMsg['changeLimit']['description'], inline=False)
-        e.add_field(name=helpMsg['currentValue']['name'], value=helpMsg['currentValue']['description'], inline=False)
-        e.add_field(name=helpMsg['dump']['name'], value=helpMsg['dump']['description'], inline=False)
-        e.add_field(name=helpMsg['dumpR']['name'], value=helpMsg['dumpR']['description'], inline=False)
-        e.add_field(name=helpMsg['reset']['name'], value=helpMsg['reset']['description'], inline=False)
-        e.add_field(name=helpMsg['resetAll']['name'], value=helpMsg['resetAll']['description'], inline=False)
+    if ctx.guild is not None:
+        FoudersEd = discord.utils.get(ctx.guild.roles, id=549988038516670506)
+        mods = discord.utils.get(ctx.guild.roles, id=549988228737007638)
+        testFoudersEd = discord.utils.get(ctx.guild.roles, id=874375168204611604)
+        if FoudersEd in ctx.author.roles or mods in ctx.author.roles or testFoudersEd in ctx.author.roles:
+            e.add_field(name=helpMsg['changeDelay']['name'], value=helpMsg['changeDelay']['description'], inline=False)
+            e.add_field(name=helpMsg['changeLimit']['name'], value=helpMsg['changeLimit']['description'], inline=False)
+            e.add_field(name=helpMsg['currentValue']['name'], value=helpMsg['currentValue']['description'], inline=False)
+            e.add_field(name=helpMsg['dump']['name'], value=helpMsg['dump']['description'], inline=False)
+            e.add_field(name=helpMsg['dumpR']['name'], value=helpMsg['dumpR']['description'], inline=False)
+            e.add_field(name=helpMsg['reset']['name'], value=helpMsg['reset']['description'], inline=False)
+            e.add_field(name=helpMsg['resetAll']['name'], value=helpMsg['resetAll']['description'], inline=False)
+    e.add_field(name=helpMsg['bingo']['name'], value=helpMsg['bingo']['description'], inline=False)
     e.add_field(name=helpMsg['special']['name'], value=helpMsg['special']['description'], inline=False)
     # e.set_image(url="https://cdn.discordapp.com/emojis/575642684006334464.png?size=40")
     e.set_footer(text="Made by Fraulk", icon_url="https://cdn.discordapp.com/avatars/192300712049246208/a_c7d1c089c53b152ed0b3b00304fa3307.webp?size=40")

@@ -59,6 +59,11 @@ badBot = {
         'botPosition': (450, 430),
         'badPosition': (370, 90)
     },
+    'pepeSad': {
+        'size': (128, 128),
+        'botPosition': (-128, -128),
+        'badPosition': (-128, -128)
+    },
 }
 
 badGifs = [
@@ -180,7 +185,7 @@ helpMsg = {
     },
     'uuu': {
         'name': '!uuu [name]',
-        'description': 'Checks if a game is compatible with UUU or have a guide on the site. ex: !uuu the ascent'
+        'description': 'Checks if a game is compatible with UUU. ex: !uuu the ascent'
     },
     'cheat': {
         'name': '!cheat [name]',
@@ -218,8 +223,22 @@ helpMsg = {
         'name': '!resetAll',
         'description': 'Resets the count for everyone'
     },
+    'bingo': {
+        'name': '!bingo',
+        'description': 'Play to the framed bingo !'
+    },
     'special': {
         'name': 'Special reaction',
         'description': 'The bot has special reaction for some query : "good|bad|horny bot"'
     },
 }
+
+bingoText = [
+    ["tweets gets people mad", "syphon lore fail", "game crashes", "V💜S", "HighQualityMeme™"],
+    ["skall starts smthng", "someone's drunk", "play w/ the bot", "nuvo disagrees", "sono interrupts convo"],
+    ["should play tgthr", "social media sucks", "FREE SPOT", "BBPC/Elden Ring", "Smithy has a bad opinion"],
+    ["someone brings up nft", "someone didn't readme", "ghost says hi", "from scrap to hof", "cat gif"],
+    ["moy nerds out", "suspiria talks abt old days", "hof anxiety", "mentions retiring", "awake at 6am"]
+]
+
+bingoPoints = []
