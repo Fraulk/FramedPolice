@@ -100,6 +100,104 @@ async def secondLook(message):
     print("---------------------------------------- Building ended")
     ref.child(str(message.author.id)).set(userDict)
 
+class EphemeralBingo(View):
+
+    def __init__(self, ctx, timeout = None):
+        super().__init__(timeout=timeout)
+        self.chanId = ctx.channel.id
+        # print(self.chanId)
+        # print(ctx.author)
+
+    @discord.ui.button(label='Check', style=discord.ButtonStyle.blurple)
+    async def check(self, button: discord.ui.Button, interaction: discord.Interaction):
+        await interaction.response.send_message("Choose a box", view=BingoView(params={'user': interaction.user, 'channel': self.chanId}), ephemeral=True)
+        
+    @discord.ui.button(label='Check Compact', style=discord.ButtonStyle.grey)
+    async def checkCompact(self, button: discord.ui.Button, interaction: discord.Interaction):
+        await interaction.response.send_message("Choose a box", view=BingoView(params={'compact': True, 'user': interaction.user, 'channel': self.chanId}), ephemeral=True)
+
+    # @discord.ui.button(label='Show score', style=discord.ButtonStyle.grey)
+    # async def showScore(self, button: discord.ui.Button, interaction: discord.Interaction):
+    #     await interaction.response.send_message("Current score", ephemeral=True)
+
+class BingoView(View):
+
+    def __init__(self, params, timeout = None):
+        super().__init__(timeout=timeout)
+        if not params.get('compact'): params['compact'] = False
+        # print(params['user'].id)
+        self.user = params['user']
+        self.channel = params['channel']
+        self.board = self.getScore()
+        # print(self.user)
+        # print(self.board)
+        for x in range(5):
+            for y in range(5):
+                if params['compact']: self.add_item(BingoViewButton(x, y, f"{x+1}-{y+1}", self.board))
+                if not params['compact']: self.add_item(BingoViewButton(x, y, bingoText[y][x], self.board))
+
+    def getScore(self):
+        # print(self.user.id)
+        for bp in bingoPoints:
+            # print(bp.name)
+            # print(bp.pointMap)
+            if bp.id == self.user.id:
+                return bp.pointMap
+        # print("came here")
+        bingoPoints.append(BingoPoints(self.user.id, self.user, [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]))
+        return [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]
+
+    def setScore(self, x, y):
+        # print(self.user.id)
+        for bp in bingoPoints:
+            if bp.id == self.user.id:
+                # print(bp.name)
+                # print(bp.pointMap)
+                bp.pointMap[x][y] = 1
+
+    def checkWinner(self):
+        for horizontal in self.board:
+            value = sum(horizontal)
+            if value == 5:
+                return self.user
+        for vertical in range(5):
+            value = self.board[0][vertical] + self.board[1][vertical] + self.board[2][vertical] + self.board[3][vertical] + self.board[4][vertical]
+            if value == 5:
+                return self.user
+        diagBLTR = self.board[0][4] + self.board[1][3] + self.board[2][2] + self.board[3][1] + self.board[4][0]
+        if diagBLTR == 5:
+            return self.user
+        diagTLBR = self.board[0][0] + self.board[1][1] + self.board[2][2] + self.board[3][3] + self.board[4][4]
+        if diagTLBR == 5:
+            return self.user
+        return None
+    # https://github.com/Rapptz/discord.py/blob/45d498c1b76deaf3b394d17ccf56112fa691d160/examples/views/tic_tac_toe.py
+
+class BingoViewButton(Button):
+    def __init__(self, x, y, label, board):
+        if board[x][y] == 1:
+            super().__init__(label=label, style=discord.ButtonStyle.success, disabled=True, row=y)
+        if board[x][y] == 0:
+            super().__init__(label=label, style=discord.ButtonStyle.secondary, row=y)
+        self.x = x
+        self.y = y
+        self.label = label if label != "3-3" else "Free"
+    
+    async def callback(self, interaction: discord.Interaction):
+        assert self.view is not None
+        view = self.view
+        view.setScore(self.x, self.y)
+
+        self.style = discord.ButtonStyle.success
+        self.disabled = True
+        for child in view.children:
+            child.disabled = True
+        await interaction.response.edit_message(view=view)
+
+        winner = view.checkWinner()
+        if winner is not None:
+            bot.dispatch("bingo_winner", view.user, view.channel)
+
 @bot.event
 async def on_ready():
     print(f"{bot.user} logged in")
@@ -279,6 +377,15 @@ async def resetAll(ctx):
     print(f"'resetAll' command has been used by {ctx.author.name}#{ctx.author.discriminator}")
     await ctx.send("Everyone has been reset")
 
+@bot.command(name='countShots', help='Count the last 7 days shots or from a certain date')
+@commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
+async def countShots(ctx, *args):
+    week_ago = datetime.datetime.today() - datetime.timedelta(days=7)
+    print(week_ago)
+    channel = bot.get_channel(SYSChannel)
+    messages = await channel.history(limit=None, after=week_ago).flatten()
+    print(len(messages))
+
 @bot.command(name='cam', help='Search for a freecams or a tool by string. ex: !cam cyberpunk 2077')
 async def cam(ctx, *args):
     async with ctx.typing():
@@ -349,7 +456,7 @@ async def tool(ctx, *args):
             data += cheats
         if len(data) == 0: data = random.choice(notFound).format(' '.join(args))
         if random.randint(0, 9) <= 1:
-             data += "\n**╘** : <https://discord.com/channels/549986543650078722/549986543650078725/893340504719249429>"
+            data += "\n**╘** : <https://discord.com/channels/549986543650078722/549986543650078725/893340504719249429>"
         # e = discord.Embed(title="FRAMED. Screenshot Community",
         #                   url="https://framedsc.github.io/index.htm",
         #                   description="© 2019-2021 FRAMED. All rights reserved. ",
@@ -364,7 +471,7 @@ async def tools(ctx, *args):
 
 @bot.command(name="bingo", help="Play to the framed bingo !")
 async def bingo(ctx, *args):
-    bingoView = EphemeralBingo()
+    bingoView = EphemeralBingo(ctx) # ctx as param
     e = discord.Embed(title="Bingo card",
                       url="https://discord.com/channels/549986543650078722/549986543650078725/914511447176921098",
                       description="",
@@ -372,6 +479,12 @@ async def bingo(ctx, *args):
     )
     e.set_image(url="https://cdn.discordapp.com/attachments/549986543650078725/914511446975582218/bingo2.png")
     await ctx.send("", view=bingoView, embed=e)
+
+@bot.event
+async def on_bingo_winner(user, channelId):
+    bingoPoints.clear()
+    channel = bot.get_channel(channelId)
+    await channel.send(f"{user.mention} won the bingo !")
 
 @bot.command(name='help')
 async def help(ctx, *args):
@@ -415,7 +528,13 @@ async def help(ctx, *args):
 # TODO : create a !cheat commands that gets cheat table from framed site
 # TODO : put things in embeds : https://leovoel.github.io/embed-visualizer/
 # FIXME : catch commands used without arguments
-# FIXME : remove spaces from links, test with cyberpunk
+# FIXME : remove spaces from links, test with cyberpunk, bal
+# FIXME : !tools la throws index out of range
+# FIXME : !tools halo throws error
+# FIXME : !tools watch dogs 2 has embeds, same for nier
+# TODO : make the bot detect birthday on message
+# TODO : add bingo command
+# TODO : add dropdown and buttons to tools
 
 if os.path.isfile('./messages.pkl'):
     with open('messages.pkl', 'rb') as f:

@@ -1,12 +1,16 @@
 import re
 import random
 import discord
+from discord.ext import commands
+from discord.ext.commands import Bot
 import requests
 from PIL import Image
 from discord.ui import button, View, Button, view
 from discord.interactions import Interaction
 
 from vars import *
+
+# bot = commands.Bot(command_prefix='')
 
 async def getCams(args):
     response = requests.get('https://docs.google.com/spreadsheet/ccc?key=1lnM2SM_RBzqile870zG70E39wuuseqQE0AaPW-P1p5E&output=csv')
@@ -175,45 +179,8 @@ async def react(message, reason, botAvatar):
         memeCopy.save('./temp.jpg', quality=95)
         await message.reply(file=discord.File('temp.jpg'))
 
-class EphemeralBingo(View):
-    @discord.ui.button(label='Check', style=discord.ButtonStyle.blurple)
-    async def check(self, button: discord.ui.Button, interaction: discord.Interaction):
-        await interaction.response.send_message("Choose a box", view=BingoView(), ephemeral=True)
-        
-    @discord.ui.button(label='Show score', style=discord.ButtonStyle.grey)
-    async def showScore(self, button: discord.ui.Button, interaction: discord.Interaction):
-        await interaction.response.send_message("Current score", ephemeral=True)
-
-class BingoView(View):
-
-    def __init__(self, *, timeout = None):
-        super().__init__(timeout=timeout)
-        for x in range(5):
-            for y in range(5):
-                self.add_item(BingoViewButton(x, y, bingoText[y][x]))
-
-    def checkBingo(self):
-        pass
-    # https://github.com/Rapptz/discord.py/blob/45d498c1b76deaf3b394d17ccf56112fa691d160/examples/views/tic_tac_toe.py
-
-class BingoViewButton(Button):
-    def __init__(self, x, y, label):
-        super().__init__(label=label, style=discord.ButtonStyle.secondary, row=y)
-        self.x = x
-        self.y = y
-        self.label = label
-    
-    async def callback(self, interaction: discord.Interaction):
-        assert self.view is not None
-        view = self.view
-        self.style = discord.ButtonStyle.success
-        self.disabled = True
-        for child in view.children:
-            child.disabled = True
-        await interaction.response.edit_message(view=view)
-
 class BingoPoints:
-    def __init__(self, id, name, points) -> None:
+    def __init__(self, id, name, pointMap) -> None:
         self.id = id
         self.name = name
-        self.points = points
+        self.pointMap = pointMap
