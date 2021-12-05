@@ -120,43 +120,38 @@ class EphemeralBingo(View):
     async def checkCompact(self, button: discord.ui.Button, interaction: discord.Interaction):
         await interaction.response.send_message("Choose a box", view=BingoView(params={'compact': True, 'user': interaction.user, 'channel': self.chanId}), ephemeral=True)
 
-    # @discord.ui.button(label='Show score', style=discord.ButtonStyle.grey)
-    # async def showScore(self, button: discord.ui.Button, interaction: discord.Interaction):
-    #     await interaction.response.send_message("Current score", ephemeral=True)
+    @discord.ui.button(label='Reset me', style=discord.ButtonStyle.grey)
+    async def resetMe(self, button: discord.ui.Button, interaction: discord.Interaction):
+        for bp in bingoPoints:
+            if bp.id == interaction.user.id:
+                bp.pointMap = [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]
+        button.label = "Done !"
+        button.style = discord.ButtonStyle.success
+        await interaction.response.edit_message(view=self)
 
 class BingoView(View):
 
     def __init__(self, params, timeout = None):
         super().__init__(timeout=timeout)
         if not params.get('compact'): params['compact'] = False
-        # print(params['user'].id)
         self.user = params['user']
         self.channel = params['channel']
         self.board = self.getScore()
-        # print(self.user)
-        # print(self.board)
         for x in range(5):
             for y in range(5):
                 if params['compact']: self.add_item(BingoViewButton(x, y, f"{x+1}-{y+1}", self.board))
                 if not params['compact']: self.add_item(BingoViewButton(x, y, bingoText[y][x], self.board))
 
     def getScore(self):
-        # print(self.user.id)
         for bp in bingoPoints:
-            # print(bp.name)
-            # print(bp.pointMap)
             if bp.id == self.user.id:
                 return bp.pointMap
-        # print("came here")
         bingoPoints.append(BingoPoints(self.user.id, self.user.name, [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]))
         return [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]
 
     def setScore(self, x, y):
-        # print(self.user.id)
         for bp in bingoPoints:
             if bp.id == self.user.id:
-                # print(bp.name)
-                # print(bp.pointMap)
                 bp.pointMap[x][y] = 1
 
     def checkWinner(self):
