@@ -78,6 +78,10 @@ async def save():
     with open('messages.pkl', 'wb') as f:
         pickle.dump(usersMessages, f)
 
+def saveBingo():
+    with open('bingo.pkl', 'wb') as f:
+        pickle.dump(bingoPoints, f)
+
 async def secondLook(message):
     userDict = {}
     links = re.findall("(https:\/\/discord.com\/channels\/.*\/.*\d)(?:| )", message.content)
@@ -144,7 +148,7 @@ class BingoView(View):
             if bp.id == self.user.id:
                 return bp.pointMap
         # print("came here")
-        bingoPoints.append(BingoPoints(self.user.id, self.user, [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]))
+        bingoPoints.append(BingoPoints(self.user.id, self.user.name, [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]))
         return [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]
 
     def setScore(self, x, y):
@@ -187,6 +191,7 @@ class BingoViewButton(Button):
         assert self.view is not None
         view = self.view
         view.setScore(self.x, self.y)
+        saveBingo()
 
         self.style = discord.ButtonStyle.success
         self.disabled = True
@@ -469,7 +474,10 @@ async def tool(ctx, *args):
 async def tools(ctx, *args):
     await tool(ctx, *args)
 
+commandCooldown = 1000
+cooldownEnd = 0
 @bot.command(name="bingo", help="Play to the framed bingo !")
+@commands.cooldown(1, 30, commands.BucketType.guild)
 async def bingo(ctx, *args):
     bingoView = EphemeralBingo(ctx) # ctx as param
     e = discord.Embed(title="Bingo card",
@@ -483,6 +491,7 @@ async def bingo(ctx, *args):
 @bot.event
 async def on_bingo_winner(user, channelId):
     bingoPoints.clear()
+    saveBingo()
     channel = bot.get_channel(channelId)
     await channel.send(f"{user.mention} won the bingo !")
 
@@ -533,7 +542,6 @@ async def help(ctx, *args):
 # FIXME : !tools halo throws error
 # FIXME : !tools watch dogs 2 has embeds, same for nier
 # TODO : make the bot detect birthday on message
-# TODO : add bingo command
 # TODO : add dropdown and buttons to tools
 
 if os.path.isfile('./messages.pkl'):
@@ -541,5 +549,11 @@ if os.path.isfile('./messages.pkl'):
         usersMessages = pickle.load(f)
 else:
     with open('messages.pkl', 'wb'): pass
+
+if os.path.isfile('./bingo.pkl'):
+    with open('bingo.pkl', 'rb') as f:
+        bingoPoints = pickle.load(f)
+else:
+    with open('bingo.pkl', 'wb'): pass
 
 bot.run(API_KEY)

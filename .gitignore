@@ -1,5 +1,6 @@
 .env
 messages.pkl
+bingo.pkl
 test.py
 secret.json
 temp.jpg
