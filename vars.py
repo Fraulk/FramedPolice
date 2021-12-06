@@ -83,6 +83,7 @@ badReaction = [
     "<a:blink:750012630030221332>",
     "<:blobNO:613463993058852865>",
     "<a:blobangryAnim:551112353236779029>",
+    "<:wellwellwell:908910894761771048>",
 ]
 
 hornyBot = {

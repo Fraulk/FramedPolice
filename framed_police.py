@@ -187,6 +187,7 @@ class BingoViewButton(Button):
         view = self.view
         view.setScore(self.x, self.y)
         saveBingo()
+        crossBingo(self.x, self.y, False)
 
         self.style = discord.ButtonStyle.success
         self.disabled = True
@@ -475,13 +476,13 @@ cooldownEnd = 0
 @commands.cooldown(1, 30, commands.BucketType.guild)
 async def bingo(ctx, *args):
     bingoView = EphemeralBingo(ctx) # ctx as param
-    e = discord.Embed(title="Bingo card",
-                      url="https://discord.com/channels/549986543650078722/549986543650078725/914511447176921098",
-                      description="",
-                      color=0x9a9a9a
-    )
-    e.set_image(url="https://cdn.discordapp.com/attachments/549986543650078725/914511446975582218/bingo2.png")
-    await ctx.send("", view=bingoView, embed=e)
+    # e = discord.Embed(title="Bingo card",
+    #                   url="https://discord.com/channels/549986543650078722/549986543650078725/914511447176921098",
+    #                   description="",
+    #                   color=0x9a9a9a
+    # )
+    # e.set_image(url="https://cdn.discordapp.com/attachments/549986543650078725/914511446975582218/bingo2.png")
+    await ctx.send("", view=bingoView, file=discord.File('tempBingo.png'))
 
 @bot.command(name="resetBingo", help="Manually reset the bingo")
 async def resetBingo(ctx):
@@ -559,5 +560,7 @@ if os.path.isfile('./bingo.pkl'):
         bingoPoints = pickle.load(f)
 else:
     with open('bingo.pkl', 'wb'): pass
+
+crossBingo(-2, -1, True)
 
 bot.run(API_KEY)

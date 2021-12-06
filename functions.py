@@ -4,7 +4,7 @@ import discord
 from discord.ext import commands
 from discord.ext.commands import Bot
 import requests
-from PIL import Image
+from PIL import Image, ImageDraw
 from discord.ui import button, View, Button, view
 from discord.interactions import Interaction
 
@@ -184,3 +184,19 @@ class BingoPoints:
         self.id = id
         self.name = name
         self.pointMap = pointMap
+
+def crossBingo(caseX, caseY, reset):
+    caseSize = 285
+    X, Y = (119, 260)
+    X += caseSize * caseX
+    Y += caseSize * caseY
+    botPfp = requests.get("https://cdn.discordapp.com/avatars/873628046194778123/d32af7390877105a0700d7eb22ed3b3a.png?size=240", stream=True).raw
+    bingo = Image.open('images/bingo.png') if reset == True else Image.open('./tempBingo.png')
+    botImg = Image.open(botPfp)
+    botMask = Image.new("L", botImg.size, 0)
+    draw = ImageDraw.Draw(botMask)
+    draw.ellipse((0, 0, 240, 240), fill=150)
+    botImg.putalpha(botMask)
+    bingoCopy = bingo.copy()
+    bingoCopy.paste(botImg, (X, Y), botImg) # (119, 260)
+    bingoCopy.save('./tempBingo.png', quality=95)
