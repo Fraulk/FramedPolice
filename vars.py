@@ -227,6 +227,10 @@ helpMsg = {
         'name': '!bingo',
         'description': 'Play to the framed bingo !'
     },
+    'resetBingo': {
+        'name': '!resetBingo',
+        'description': 'Manually reset the bingo. (doesn\'t return any message)'
+    },
     'special': {
         'name': 'Special reaction',
         'description': 'The bot has special reaction for some query : "good|bad|horny bot"'
@@ -242,3 +246,11 @@ bingoText = [
 ]
 
 bingoPoints = []
+
+emptyBingo = [
+    [0, 0, 0, 0, 0], 
+    [0, 0, 0, 0, 0], 
+    [0, 0, 0, 0, 0], 
+    [0, 0, 0, 0, 0], 
+    [0, 0, 0, 0, 0]
+]

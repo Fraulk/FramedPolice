@@ -120,14 +120,14 @@ class EphemeralBingo(View):
     async def checkCompact(self, button: discord.ui.Button, interaction: discord.Interaction):
         await interaction.response.send_message("Choose a box", view=BingoView(params={'compact': True, 'user': interaction.user, 'channel': self.chanId}), ephemeral=True)
 
-    @discord.ui.button(label='Reset me', style=discord.ButtonStyle.grey)
-    async def resetMe(self, button: discord.ui.Button, interaction: discord.Interaction):
-        for bp in bingoPoints:
-            if bp.id == interaction.user.id:
-                bp.pointMap = [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]
-        button.label = "Done !"
-        button.style = discord.ButtonStyle.success
-        await interaction.response.edit_message(view=self)
+    # @discord.ui.button(label='Reset me', style=discord.ButtonStyle.grey)
+    # async def resetMe(self, button: discord.ui.Button, interaction: discord.Interaction):
+    #     for bp in bingoPoints:
+    #         if bp.id == interaction.user.id:
+    #             bp.pointMap = [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]
+    #     button.label = "Done !"
+    #     button.style = discord.ButtonStyle.success
+    #     await interaction.response.edit_message(view=self)
 
 class BingoView(View):
 
@@ -146,8 +146,8 @@ class BingoView(View):
         for bp in bingoPoints:
             if bp.id == self.user.id:
                 return bp.pointMap
-        bingoPoints.append(BingoPoints(self.user.id, self.user.name, [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]))
-        return [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]
+        bingoPoints.append(BingoPoints(self.user.id, self.user.name, emptyBingo))
+        return emptyBingo
 
     def setScore(self, x, y):
         for bp in bingoPoints:
@@ -483,12 +483,20 @@ async def bingo(ctx, *args):
     e.set_image(url="https://cdn.discordapp.com/attachments/549986543650078725/914511446975582218/bingo2.png")
     await ctx.send("", view=bingoView, embed=e)
 
+@bot.command(name="resetBingo", help="Manually reset the bingo")
+async def resetBingo(ctx):
+    bingoPoints.clear()
+    global emptyBingo
+    emptyBingo = [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]
+
 @bot.event
 async def on_bingo_winner(user, channelId):
     bingoPoints.clear()
+    global emptyBingo
+    emptyBingo = [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]
     saveBingo()
     channel = bot.get_channel(channelId)
-    await channel.send(f"{user.mention} won the bingo !")
+    await channel.send("The bingo has been completed !")
 
 @bot.command(name='help')
 async def help(ctx, *args):
@@ -515,6 +523,7 @@ async def help(ctx, *args):
             e.add_field(name=helpMsg['dumpR']['name'], value=helpMsg['dumpR']['description'], inline=False)
             e.add_field(name=helpMsg['reset']['name'], value=helpMsg['reset']['description'], inline=False)
             e.add_field(name=helpMsg['resetAll']['name'], value=helpMsg['resetAll']['description'], inline=False)
+            e.add_field(name=helpMsg['resetBingo']['name'], value=helpMsg['resetBingo']['description'], inline=False)
     e.add_field(name=helpMsg['bingo']['name'], value=helpMsg['bingo']['description'], inline=False)
     e.add_field(name=helpMsg['special']['name'], value=helpMsg['special']['description'], inline=False)
     # e.set_image(url="https://cdn.discordapp.com/emojis/575642684006334464.png?size=40")
