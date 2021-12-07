@@ -180,23 +180,32 @@ async def react(message, reason, botAvatar):
         await message.reply(file=discord.File('temp.jpg'))
 
 class BingoPoints:
-    def __init__(self, id, name, pointMap) -> None:
+    def __init__(self, id, name) -> None:
         self.id = id
         self.name = name
-        self.pointMap = pointMap
+        # self.pointMap = pointMap
 
-def crossBingo(caseX, caseY, reset):
+def crossBingo(caseX, caseY, reset, avatar = None):
     caseSize = 285
     X, Y = (119, 260)
     X += caseSize * caseX
     Y += caseSize * caseY
-    botPfp = requests.get("https://cdn.discordapp.com/avatars/873628046194778123/d32af7390877105a0700d7eb22ed3b3a.png?size=240", stream=True).raw
+    if avatar == None:
+        botPfp = requests.get("https://cdn.discordapp.com/avatars/873628046194778123/d32af7390877105a0700d7eb22ed3b3a.png?size=240", stream=True).raw
+    else:
+        botPfp = requests.get(avatar, stream=True).raw
     bingo = Image.open('images/bingo.png') if reset == True else Image.open('./tempBingo.png')
     botImg = Image.open(botPfp)
     botMask = Image.new("L", botImg.size, 0)
     draw = ImageDraw.Draw(botMask)
-    draw.ellipse((0, 0, 240, 240), fill=150)
+    draw.ellipse((0, 0, 240, 240), fill=120)
     botImg.putalpha(botMask)
     bingoCopy = bingo.copy()
     bingoCopy.paste(botImg, (X, Y), botImg) # (119, 260)
     bingoCopy.save('./tempBingo.png', quality=95)
+
+def recreateBingo(bingo):
+    for i in range(len(bingo)):
+        for j in range(len(bingo[i])):
+            if bingo[i][j] == 1:
+                crossBingo(i, j, False)

@@ -80,7 +80,7 @@ async def save():
 
 def saveBingo():
     with open('bingo.pkl', 'wb') as f:
-        pickle.dump(bingoPoints, f)
+        pickle.dump(emptyBingo, f)
 
 async def secondLook(message):
     userDict = {}
@@ -112,11 +112,11 @@ class EphemeralBingo(View):
         # print(self.chanId)
         # print(ctx.author)
 
-    @discord.ui.button(label='Check', style=discord.ButtonStyle.blurple)
-    async def check(self, button: discord.ui.Button, interaction: discord.Interaction):
-        await interaction.response.send_message("Choose a box", view=BingoView(params={'user': interaction.user, 'channel': self.chanId}), ephemeral=True)
+    # @discord.ui.button(label='Check', style=discord.ButtonStyle.blurple)
+    # async def check(self, button: discord.ui.Button, interaction: discord.Interaction):
+    #     await interaction.response.send_message("Choose a box", view=BingoView(params={'user': interaction.user, 'channel': self.chanId}), ephemeral=True)
         
-    @discord.ui.button(label='Check Compact', style=discord.ButtonStyle.grey)
+    @discord.ui.button(label='Check', style=discord.ButtonStyle.blurple)
     async def checkCompact(self, button: discord.ui.Button, interaction: discord.Interaction):
         await interaction.response.send_message("Choose a box", view=BingoView(params={'compact': True, 'user': interaction.user, 'channel': self.chanId}), ephemeral=True)
 
@@ -139,20 +139,23 @@ class BingoView(View):
         self.board = self.getScore()
         for x in range(5):
             for y in range(5):
-                if params['compact']: self.add_item(BingoViewButton(x, y, f"{x+1}-{y+1}", self.board))
-                if not params['compact']: self.add_item(BingoViewButton(x, y, bingoText[y][x], self.board))
+                if params['compact']: self.add_item(BingoViewButton(x, y, f"{x+1}-{y+1}", self.board, self.user.avatar))
+                if not params['compact']: self.add_item(BingoViewButton(x, y, bingoText[y][x], self.board, self.user.avatar))
 
     def getScore(self):
-        for bp in bingoPoints:
-            if bp.id == self.user.id:
-                return bp.pointMap
-        bingoPoints.append(BingoPoints(self.user.id, self.user.name, emptyBingo))
+        # for bp in bingoPoints:
+        #     if bp.id == self.user.id:
+        #         return bp.pointMap
+        # bingoPoints.append(BingoPoints(self.user.id, self.user.name))
         return emptyBingo
 
     def setScore(self, x, y):
+        emptyBingo[x][y] = 1
         for bp in bingoPoints:
             if bp.id == self.user.id:
-                bp.pointMap[x][y] = 1
+                # bp.pointMap[x][y] = 1
+                return True
+        bingoPoints.append(BingoPoints(self.user.id, self.user.name))
 
     def checkWinner(self):
         for horizontal in self.board:
@@ -173,7 +176,7 @@ class BingoView(View):
     # https://github.com/Rapptz/discord.py/blob/45d498c1b76deaf3b394d17ccf56112fa691d160/examples/views/tic_tac_toe.py
 
 class BingoViewButton(Button):
-    def __init__(self, x, y, label, board):
+    def __init__(self, x, y, label, board, avatar):
         if board[x][y] == 1:
             super().__init__(label=label, style=discord.ButtonStyle.success, disabled=True, row=y)
         if board[x][y] == 0:
@@ -181,13 +184,14 @@ class BingoViewButton(Button):
         self.x = x
         self.y = y
         self.label = label if label != "3-3" else "Free"
+        self.avatar = avatar
     
     async def callback(self, interaction: discord.Interaction):
         assert self.view is not None
         view = self.view
         view.setScore(self.x, self.y)
         saveBingo()
-        crossBingo(self.x, self.y, False)
+        crossBingo(self.x, self.y, False, self.avatar.with_size(256) if self.avatar != None else None)
 
         self.style = discord.ButtonStyle.success
         self.disabled = True
@@ -202,6 +206,8 @@ class BingoViewButton(Button):
 @bot.event
 async def on_ready():
     print(f"{bot.user} logged in")
+    if not os.path.isfile('./tempBingo.png'):
+        recreateBingo(emptyBingo)
 
 @bot.event
 async def on_message(message):
@@ -489,6 +495,13 @@ async def resetBingo(ctx):
     bingoPoints.clear()
     global emptyBingo
     emptyBingo = [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]
+    crossBingo(-2, -1, True)
+
+@bot.command(name="changeBingo", help="Change the bingo image")
+async def resetBingo(ctx):
+    print(ctx.message)
+    if hasattr(ctx.message, 'attachments') and len(ctx.message.attachments) == 1:
+        print(ctx.message.attachments)
 
 @bot.event
 async def on_bingo_winner(user, channelId):
@@ -496,6 +509,7 @@ async def on_bingo_winner(user, channelId):
     global emptyBingo
     emptyBingo = [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]
     saveBingo()
+    crossBingo(-2, -1, True)
     channel = bot.get_channel(channelId)
     await channel.send("The bingo has been completed !")
 
@@ -557,10 +571,11 @@ else:
 
 if os.path.isfile('./bingo.pkl'):
     with open('bingo.pkl', 'rb') as f:
-        bingoPoints = pickle.load(f)
+        emptyBingo = pickle.load(f)
 else:
     with open('bingo.pkl', 'wb'): pass
 
-crossBingo(-2, -1, True)
+if not os.path.isfile('./tempBingo.png'):
+    crossBingo(-2, -1, True)
 
 bot.run(API_KEY)
