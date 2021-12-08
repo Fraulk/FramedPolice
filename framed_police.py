@@ -497,11 +497,16 @@ async def resetBingo(ctx):
     emptyBingo = [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]
     crossBingo(-2, -1, True)
 
-@bot.command(name="changeBingo", help="Change the bingo image")
-async def resetBingo(ctx):
-    print(ctx.message)
-    if hasattr(ctx.message, 'attachments') and len(ctx.message.attachments) == 1:
-        print(ctx.message.attachments)
+@bot.command(name="changeBingo", help="Change the bingo image (change takes effect at the next round")
+async def changeBingo(ctx):
+    if hasattr(ctx.message, 'attachments') and len(ctx.message.attachments) == 1 and ctx.message.attachments[0].url[-3:] == "png":
+        async with ctx.typing():
+            newBingoRaw = requests.get(ctx.message.attachments[0].url, stream=True).raw
+            newBingo = Image.open(newBingoRaw)
+            newBingo.save('images/bingo.png')
+        await ctx.send("The new bingo image has been set !\nThe new bingo will be used for the next round")
+    else:    
+        await ctx.send("Oops, something went wrong...\nPlease send a valid **PNG** file attached to the command message")
 
 @bot.event
 async def on_bingo_winner(user, channelId):
@@ -509,9 +514,11 @@ async def on_bingo_winner(user, channelId):
     global emptyBingo
     emptyBingo = [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]
     saveBingo()
+    lastBingo = Image.open('./tempBingo.png')
+    lastBingo.save('./lastBingo.png')
     crossBingo(-2, -1, True)
     channel = bot.get_channel(channelId)
-    await channel.send("The bingo has been completed !")
+    await channel.send("The bingo has been completed !", file=discord.File('./lastBingo.png'))
 
 @bot.command(name='help')
 async def help(ctx, *args):
