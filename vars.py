@@ -232,6 +232,10 @@ helpMsg = {
         'name': '!resetBingo',
         'description': 'Manually reset the bingo. (doesn\'t return any message)'
     },
+    'changeBingo': {
+        'name': '!changeBingo',
+        'description': 'Change the bingo image with the attached png file in your command\n(change takes effect at the next round)'
+    },
     'special': {
         'name': 'Special reaction',
         'description': 'The bot has special reaction for some query : "good|bad|horny bot"'

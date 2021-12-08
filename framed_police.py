@@ -109,25 +109,10 @@ class EphemeralBingo(View):
     def __init__(self, ctx, timeout = None):
         super().__init__(timeout=timeout)
         self.chanId = ctx.channel.id
-        # print(self.chanId)
-        # print(ctx.author)
-
-    # @discord.ui.button(label='Check', style=discord.ButtonStyle.blurple)
-    # async def check(self, button: discord.ui.Button, interaction: discord.Interaction):
-    #     await interaction.response.send_message("Choose a box", view=BingoView(params={'user': interaction.user, 'channel': self.chanId}), ephemeral=True)
         
     @discord.ui.button(label='Check', style=discord.ButtonStyle.blurple)
     async def checkCompact(self, button: discord.ui.Button, interaction: discord.Interaction):
         await interaction.response.send_message("Choose a box", view=BingoView(params={'compact': True, 'user': interaction.user, 'channel': self.chanId}), ephemeral=True)
-
-    # @discord.ui.button(label='Reset me', style=discord.ButtonStyle.grey)
-    # async def resetMe(self, button: discord.ui.Button, interaction: discord.Interaction):
-    #     for bp in bingoPoints:
-    #         if bp.id == interaction.user.id:
-    #             bp.pointMap = [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]
-    #     button.label = "Done !"
-    #     button.style = discord.ButtonStyle.success
-    #     await interaction.response.edit_message(view=self)
 
 class BingoView(View):
 
@@ -464,11 +449,11 @@ async def tool(ctx, *args):
         if len(data) == 0: data = random.choice(notFound).format(' '.join(args))
         if random.randint(0, 9) <= 1:
             data += "\n**╘** : <https://discord.com/channels/549986543650078722/549986543650078725/893340504719249429>"
-        # e = discord.Embed(title="FRAMED. Screenshot Community",
-        #                   url="https://framedsc.github.io/index.htm",
-        #                   description="© 2019-2021 FRAMED. All rights reserved. ",
-        #                   color=0x9a9a9a)
-        # e.set_thumbnail(url="https://cdn.discordapp.com/emojis/575642684006334464.png?size=128")
+        e = discord.Embed(title="FRAMED. Screenshot Community",
+                          url="https://framedsc.github.io/index.htm",
+                          description="© 2019-2021 FRAMED. All rights reserved. ",
+                          color=0x9a9a9a)
+        e.set_thumbnail(url="https://cdn.discordapp.com/emojis/575642684006334464.png?size=128")
         data = await over2000(data, camGameNames + uuuGameNames + guideGameNames + cheatGameNames, args)
     await ctx.send(content=data) if len(data) < 2000 else await ctx.send("Search query is too vague, there are too many results to show") # + str(len(data))
 
@@ -497,7 +482,7 @@ async def resetBingo(ctx):
     emptyBingo = [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]
     crossBingo(-2, -1, True)
 
-@bot.command(name="changeBingo", help="Change the bingo image (change takes effect at the next round")
+@bot.command(name="changeBingo", help="Change the bingo image (change takes effect at the next round)")
 async def changeBingo(ctx):
     if hasattr(ctx.message, 'attachments') and len(ctx.message.attachments) == 1 and ctx.message.attachments[0].url[-3:] == "png":
         async with ctx.typing():
@@ -546,6 +531,7 @@ async def help(ctx, *args):
             e.add_field(name=helpMsg['reset']['name'], value=helpMsg['reset']['description'], inline=False)
             e.add_field(name=helpMsg['resetAll']['name'], value=helpMsg['resetAll']['description'], inline=False)
             e.add_field(name=helpMsg['resetBingo']['name'], value=helpMsg['resetBingo']['description'], inline=False)
+            e.add_field(name=helpMsg['changeBingo']['name'], value=helpMsg['changeBingo']['description'], inline=False)
     e.add_field(name=helpMsg['bingo']['name'], value=helpMsg['bingo']['description'], inline=False)
     e.add_field(name=helpMsg['special']['name'], value=helpMsg['special']['description'], inline=False)
     # e.set_image(url="https://cdn.discordapp.com/emojis/575642684006334464.png?size=40")
