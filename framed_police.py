@@ -455,7 +455,7 @@ async def tool(ctx, *args):
                           color=0x9a9a9a)
         e.set_thumbnail(url="https://cdn.discordapp.com/emojis/575642684006334464.png?size=128")
         data = await over2000(data, camGameNames + uuuGameNames + guideGameNames + cheatGameNames, args)
-    await ctx.send(content=data) if len(data) < 2000 else await ctx.send("Search query is too vague, there are too many results to show") # + str(len(data))
+    await ctx.send(content=data, embed=e) if len(data) < 2000 else await ctx.send("Search query is too vague, there are too many results to show") # + str(len(data))
 
 @bot.command(name='tools', help='Alias for !tool, because a lotta people does the mistake lol')
 async def tools(ctx, *args):
