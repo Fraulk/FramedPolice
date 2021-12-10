@@ -476,12 +476,14 @@ async def bingo(ctx, *args):
     await ctx.send("", view=bingoView, file=discord.File('tempBingo.png'))
 
 @bot.command(name="resetBingo", help="Manually reset the bingo")
+@commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
 async def resetBingo(ctx):
     bingoPoints.clear()
     global emptyBingo
     emptyBingo = [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]
     crossBingo(-2, -1, True)
 
+@commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
 @bot.command(name="changeBingo", help="Change the bingo image (change takes effect at the next round)")
 async def changeBingo(ctx):
     if hasattr(ctx.message, 'attachments') and len(ctx.message.attachments) == 1 and ctx.message.attachments[0].url[-3:] == "png":
