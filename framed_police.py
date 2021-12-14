@@ -135,6 +135,7 @@ class BingoView(View):
         return emptyBingo
 
     def setScore(self, x, y):
+        print(f"{self.user.name} checked the {x+1}-{y+1} case")
         emptyBingo[x][y] = 1
         for bp in bingoPoints:
             if bp.id == self.user.id:
@@ -175,8 +176,9 @@ class BingoViewButton(Button):
         assert self.view is not None
         view = self.view
         view.setScore(self.x, self.y)
+        userAvatar = self.avatar.with_size(256) if self.avatar != None else None
         saveBingo()
-        crossBingo(self.x, self.y, False, self.avatar.with_size(256) if self.avatar != None else None)
+        crossBingo(self.x, self.y, False, userAvatar)
 
         self.style = discord.ButtonStyle.success
         self.disabled = True
