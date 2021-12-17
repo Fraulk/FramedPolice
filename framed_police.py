@@ -559,6 +559,8 @@ async def help(ctx, *args):
 # FIXME : !tools watch dogs 2 has embeds, same for nier
 # TODO : make the bot detect birthday on message
 # TODO : add dropdown and buttons to tools
+# TODO : padawan role shouldn't play bingo, say something like "Sorry! You're not currently eligible to play the bingo right now." whenever a padawan presses the check button
+# TODO : i should adapt the code for tiny pfp
 
 if os.path.isfile('./messages.pkl'):
     with open('messages.pkl', 'rb') as f:

@@ -201,7 +201,16 @@ def crossBingo(caseX, caseY, reset, avatar = None):
     draw.ellipse((0, 0, 240, 240), fill=120)
     botImg.putalpha(botMask)
     bingoCopy = bingo.copy()
-    bingoCopy.paste(botImg, (X, Y), botImg) # (119, 260)
+    try:
+        bingoCopy.paste(botImg, (X, Y), botImg) # (119, 260)
+    except ValueError:
+        botPfp = requests.get("https://cdn.discordapp.com/avatars/873628046194778123/d32af7390877105a0700d7eb22ed3b3a.png?size=240", stream=True).raw
+        botImg = Image.open(botPfp)
+        botMask = Image.new("L", botImg.size, 0)
+        draw = ImageDraw.Draw(botMask)
+        draw.ellipse((0, 0, 240, 240), fill=120)
+        botImg.putalpha(botMask)
+        bingoCopy.paste(botImg, (X, Y), botImg)
     bingoCopy.save('./tempBingo.png', quality=95)
 
 def recreateBingo(bingo):
