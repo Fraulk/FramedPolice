@@ -112,7 +112,18 @@ class EphemeralBingo(View):
         
     @discord.ui.button(label='Check', style=discord.ButtonStyle.blurple)
     async def checkCompact(self, button: discord.ui.Button, interaction: discord.Interaction):
-        await interaction.response.send_message("Choose a box", view=BingoView(params={'compact': True, 'user': interaction.user, 'channel': self.chanId}), ephemeral=True)
+        try:
+            padawan = interaction.user.guild.get_role(PadawanRole)
+        except AttributeError:
+            await interaction.response.send_message("Sorry but you can only play bingo in the Framed server", ephemeral=True)
+            return
+        if padawan is None:
+            await interaction.response.send_message("Sorry but you can only play bingo in the Framed server", ephemeral=True)
+        else:
+            if padawan in interaction.user.roles:
+                await interaction.response.send_message("Sorry! Members with padawan role aren't currently eligible to play the bingo right now.", ephemeral=True)
+            else:
+                await interaction.response.send_message("Choose a box", view=BingoView(params={'compact': True, 'user': interaction.user, 'channel': self.chanId}), ephemeral=True)
 
 class BingoView(View):
 
