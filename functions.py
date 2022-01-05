@@ -191,7 +191,7 @@ def crossBingo(caseX, caseY, reset, avatar = None):
     X += caseSize * caseX
     Y += caseSize * caseY
     if avatar == None:
-        botPfp = requests.get("https://cdn.discordapp.com/avatars/873628046194778123/d32af7390877105a0700d7eb22ed3b3a.png?size=240", stream=True).raw
+        botPfp = requests.get("https://cdn.discordapp.com/avatars/873628046194778123/bb780540a15f10e3c5250a8e6c77dd1e.webp?size=240", stream=True).raw
     else:
         botPfp = requests.get(avatar, stream=True).raw
     bingo = Image.open('images/bingo.png') if reset == True else Image.open('./tempBingo.png')
@@ -204,7 +204,7 @@ def crossBingo(caseX, caseY, reset, avatar = None):
     try:
         bingoCopy.paste(botImg, (X, Y), botImg) # (119, 260)
     except ValueError:
-        botPfp = requests.get("https://cdn.discordapp.com/avatars/873628046194778123/d32af7390877105a0700d7eb22ed3b3a.png?size=240", stream=True).raw
+        botPfp = requests.get("https://cdn.discordapp.com/avatars/873628046194778123/bb780540a15f10e3c5250a8e6c77dd1e.webp?size=240", stream=True).raw
         botImg = Image.open(botPfp)
         botMask = Image.new("L", botImg.size, 0)
         draw = ImageDraw.Draw(botMask)
