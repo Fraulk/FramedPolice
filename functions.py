@@ -1,6 +1,9 @@
 import re
+import time
+import pickle
 import random
 import discord
+import datetime
 from discord.ext import commands
 from discord.ext.commands import Bot
 import requests
@@ -11,6 +14,77 @@ from discord.interactions import Interaction
 from vars import *
 
 # bot = commands.Bot(command_prefix='')
+
+usersMessages = []
+
+class UserMessage:
+    def __init__(self, id, name, time, count, reachedLimit):
+        self.id = id
+        self.name = name
+        self.time = time
+        self.count = count
+        self.reachedLimit = reachedLimit
+
+async def checkMessage(message):
+    userId = message.author.id
+    print(message.created_at)
+    embeds = message.embeds
+    attachmentCount = message.attachments
+    DMChannel = await message.author.create_dm()
+    # if message.content != '':
+    #     rightTitle = next((i for i, item in enumerate(titleAlts) if message.content in next(iter(item))), None)
+    #     if rightTitle is None:
+    #         altTitle = next((i for i, item in enumerate(titleAlts) if message.content in item[next(iter(item))]), None)
+    #         if altTitle is None:
+    #             # await DMChannel.send("It looks like the name of that game isn't registered on my database, could you ask to one of the moderator to add it please")
+    #             pass
+    #         else:
+    #             goodTitle = next(iter(titleAlts[altTitle]))
+    #             await DMChannel.send(f"The name you used isn't very clear, could you rename it with : **{goodTitle}**")
+    if len(attachmentCount) > 1:
+        await DMChannel.send(f"Please post your shots one by one.")
+        await message.delete()
+    if len(attachmentCount) == 0 and len(embeds) == 0:
+        print('ignored')
+        return
+    #     await DMChannel.send(f"Please do not talk in this channel.")
+    #     await message.delete()
+    print("Attachment count:", len(attachmentCount))
+    print("Embeds count:", len(embeds))
+    for msg in usersMessages:
+        if msg.id == userId:
+            endTime = msg.time + DELAY
+            remainingTime = DELAY - (time.time() - msg.time)
+            if msg.count == LIMIT - 1: msg.reachedLimit = True
+            print("Current Time:", endTime)
+            if time.time() <= endTime:
+                if msg.count >= LIMIT:
+                    print("Deleted")
+                    await DMChannel.send(f"Sorry but you can't post more than **{LIMIT}** shots per day.\nThe next time you can post is **<t:{round(endTime)}:F>** so in **{datetime.timedelta(seconds=round(remainingTime))}**")
+                    await message.delete()
+            else:
+                msg.time = time.time()
+                msg.count = 0
+                msg.reachedLimit = False
+            msg.count += 1
+            print(
+                f"UserId:{msg.id} Time of first message: {msg.time} Number of messages: {msg.count} By: {msg.name}\n---------------------------------------------------------------------------------------------------------------"
+            )
+            return
+    usersMessages.append(UserMessage(userId, message.author.name + "#" + message.author.discriminator, time.time(), 1, False))
+    print(f"UserId:{userId} Time of first message: {time.time()} Number of messages: {1} By: {message.author.name}#{message.author.discriminator}\n---------------------------------------------------------------------------------------------------------------")
+
+async def save():
+    with open('messages.pkl', 'wb') as f:
+        pickle.dump(usersMessages, f)
+
+def saveBingo():
+    with open('bingo.pkl', 'wb') as f:
+        pickle.dump(emptyBingo, f)
+
+def saveTitleAlts():
+    with open('titleAlts.pkl', 'wb') as f:
+        pickle.dump(titleAlts, f)
 
 async def getCams(args):
     response = requests.get('https://docs.google.com/spreadsheet/ccc?key=1lnM2SM_RBzqile870zG70E39wuuseqQE0AaPW-P1p5E&output=csv')
@@ -140,6 +214,28 @@ async def getCheats(args):
                 data += "<https://framedsc.github.io/" + match2.group(1) + ">\n" if matchNum2 == 1 else "\t**╘** : <https://framedsc.github.io/" + match2.group(1) + ">\n"
     return data, gameNames
 
+async def secondLook(message):
+    userDict = {}
+    links = re.findall("(https:\/\/discord.com\/channels\/.*\/.*\d)(?:| )", message.content)
+    if len(links) == 0: return
+    print("---------------------------------------- Building second-look message for " + message.author.name + "#" + message.author.discriminator)
+    async with message.channel.typing():
+        for link in links:
+            slink = link.split("/")
+            original_message = await bot.get_guild(int(slink[-3])).get_channel(int(slink[-2])).fetch_message(int(slink[-1]))
+            # print(original_message.author.name + "#" + original_message.author.discriminator)
+            # print(original_message.attachments[0].url)
+            tempDict = {}
+            tempDict['name'] = original_message.author.name + "#" + original_message.author.discriminator
+            tempDict['imageUrl'] = original_message.attachments[0].url
+            tempDict['width'] = original_message.attachments[0].width
+            tempDict['height'] = original_message.attachments[0].height
+            tempDict['messageUrl'] = link
+            userDict[str(original_message.id)] = tempDict
+    await bot.get_channel(SLChannel).send(f"Here is your link : https://second-look.netlify.app?id={message.author.id}")
+    print("---------------------------------------- Building ended")
+    ref.child(str(message.author.id)).set(userDict)
+
 async def startThread(message):
     title = f"Hello There, {message.author.name}"
     thread = await message.channel.create_thread(name=title, message=message, reason="Thread created for new member")
@@ -185,6 +281,103 @@ class BingoPoints:
         self.name = name
         # self.pointMap = pointMap
 
+class EphemeralBingo(View):
+
+    def __init__(self, ctx, timeout = None):
+        super().__init__(timeout=timeout)
+        self.chanId = ctx.channel.id
+        
+    @discord.ui.button(label='Check', style=discord.ButtonStyle.blurple)
+    async def checkCompact(self, button: discord.ui.Button, interaction: discord.Interaction):
+        try:
+            padawan = interaction.user.guild.get_role(PadawanRole)
+        except AttributeError:
+            await interaction.response.send_message("Sorry but you can only play bingo in the Framed server", ephemeral=True)
+            return
+        if padawan is None:
+            await interaction.response.send_message("Sorry but you can only play bingo in the Framed server", ephemeral=True)
+        else:
+            if padawan in interaction.user.roles:
+                await interaction.response.send_message("Sorry! Members with padawan role aren't currently eligible to play the bingo right now.", ephemeral=True)
+            else:
+                await interaction.response.send_message("Choose a box", view=BingoView(params={'compact': True, 'user': interaction.user, 'channel': self.chanId}), ephemeral=True)
+
+class BingoView(View):
+
+    def __init__(self, params, timeout = None):
+        super().__init__(timeout=timeout)
+        if not params.get('compact'): params['compact'] = False
+        self.user = params['user']
+        self.channel = params['channel']
+        self.board = self.getScore()
+        for x in range(5):
+            for y in range(5):
+                if params['compact']: self.add_item(BingoViewButton(x, y, f"{x+1}-{y+1}", self.board, self.user.avatar))
+                if not params['compact']: self.add_item(BingoViewButton(x, y, bingoText[y][x], self.board, self.user.avatar))
+
+    def getScore(self):
+        # for bp in bingoPoints:
+        #     if bp.id == self.user.id:
+        #         return bp.pointMap
+        # bingoPoints.append(BingoPoints(self.user.id, self.user.name))
+        return emptyBingo
+
+    def setScore(self, x, y):
+        print(f"{self.user.name} checked the {x+1}-{y+1} case")
+        emptyBingo[x][y] = 1
+        for bp in bingoPoints:
+            if bp.id == self.user.id:
+                # bp.pointMap[x][y] = 1
+                return True
+        bingoPoints.append(BingoPoints(self.user.id, self.user.name))
+
+    def checkWinner(self):
+        for horizontal in self.board:
+            value = sum(horizontal)
+            if value == 5:
+                return self.user
+        for vertical in range(5):
+            value = self.board[0][vertical] + self.board[1][vertical] + self.board[2][vertical] + self.board[3][vertical] + self.board[4][vertical]
+            if value == 5:
+                return self.user
+        diagBLTR = self.board[0][4] + self.board[1][3] + self.board[2][2] + self.board[3][1] + self.board[4][0]
+        if diagBLTR == 5:
+            return self.user
+        diagTLBR = self.board[0][0] + self.board[1][1] + self.board[2][2] + self.board[3][3] + self.board[4][4]
+        if diagTLBR == 5:
+            return self.user
+        return None
+    # https://github.com/Rapptz/discord.py/blob/45d498c1b76deaf3b394d17ccf56112fa691d160/examples/views/tic_tac_toe.py
+
+class BingoViewButton(Button):
+    def __init__(self, x, y, label, board, avatar):
+        if board[x][y] == 1:
+            super().__init__(label=label, style=discord.ButtonStyle.success, disabled=True, row=y)
+        if board[x][y] == 0:
+            super().__init__(label=label, style=discord.ButtonStyle.secondary, row=y)
+        self.x = x
+        self.y = y
+        self.label = label if label != "3-3" else "Free"
+        self.avatar = avatar
+    
+    async def callback(self, interaction: discord.Interaction):
+        assert self.view is not None
+        view = self.view
+        view.setScore(self.x, self.y)
+        userAvatar = self.avatar.with_size(256) if self.avatar != None else None
+        saveBingo()
+        crossBingo(self.x, self.y, False, userAvatar)
+
+        self.style = discord.ButtonStyle.success
+        self.disabled = True
+        for child in view.children:
+            child.disabled = True
+        await interaction.response.edit_message(view=view)
+
+        winner = view.checkWinner()
+        if winner is not None:
+            bot.dispatch("bingo_winner", view.user, view.channel)
+
 def crossBingo(caseX, caseY, reset, avatar = None):
     caseSize = 285
     X, Y = (119, 260)
@@ -218,3 +411,158 @@ def recreateBingo(bingo):
         for j in range(len(bingo[i])):
             if bingo[i][j] == 1:
                 crossBingo(i, j, False)
+
+class Confirm(View):
+    def __init__(self, players: list[str], customEmoji = None):
+        super().__init__()
+        self.connect4 = [
+            [-1, -1, -1, -1, -1, -1, -1],
+            [-1, -1, -1, -1, -1, -1, -1],
+            [-1, -1, -1, -1, -1, -1, -1],
+            [-1, -1, -1, -1, -1, -1, -1],
+            [-1, -1, -1, -1, -1, -1, -1],
+            [-1, -1, -1, -1, -1, -1, -1],
+        ]
+        self.players = players
+        self.emoji = customEmoji
+
+    # When the confirm button is pressed, set the inner value to `True` and
+    # stop the View from listening to more input.
+    # We also send the user an ephemeral message that we're confirming their choice.
+    @discord.ui.button(label='Confirm', style=discord.ButtonStyle.green)
+    async def confirm(self, button: discord.ui.Button, interaction: discord.Interaction):
+        if interaction.user.id == self.players[1]:
+            await interaction.response.edit_message(content=toDiscordString(self.connect4, 3, self.players[1], customEmoji=self.emoji), view=Connect4(self.connect4, players=self.players, customEmoji=self.emoji))
+            self.stop()
+        else:
+            await interaction.response.edit_message(content=f"<@{self.players[0]}> wants to play connect4 with you <@{self.players[1]}>, will you accept ? PS: Only the mentionned person can respond")
+
+    # This one is similar to the confirmation button except sets the inner value to `False`
+    @discord.ui.button(label='Cancel', style=discord.ButtonStyle.grey)
+    async def cancel(self, button: discord.ui.Button, interaction: discord.Interaction):
+        if interaction.user.id == self.players[1]:
+            button.disabled = True
+            for child in self.children:
+                child.disabled = True
+            await interaction.response.edit_message(content='Sorry, but the offer got rejected', view=self)
+            self.stop()
+        else:
+            await interaction.response.edit_message(content=f"<@{self.players[0]}> wants to play connect4 with you <@{self.players[1]}>, will you accept ? PS: Only the mentionned person can respond")
+
+class Connect4(View):
+    def __init__(self, board, players: list[str], customEmoji = None):
+        super().__init__()
+        self.cursor = 3
+        self.c4Board = board
+        self.emoji = customEmoji
+        self.players = players
+        self.turns = 2
+        self.playerTurn = 1
+
+    def addTurn(self):
+        self.playerTurn = self.turns % 2
+        self.turns += 1
+
+    @discord.ui.button(label='maxLeft', style=discord.ButtonStyle.gray)
+    async def maxLeft(self, button: discord.ui.Button, interaction: discord.Interaction):
+        if interaction.user.id == self.players[self.playerTurn]:
+            self.cursor = 0
+            await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], customEmoji=self.emoji))
+
+    @discord.ui.button(label='left', style=discord.ButtonStyle.gray)
+    async def left(self, button: discord.ui.Button, interaction: discord.Interaction):
+        if interaction.user.id == self.players[self.playerTurn]:
+            self.cursor -= 1 if self.cursor > 0 else 0
+            await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], customEmoji=self.emoji))
+
+    @discord.ui.button(label='add', style=discord.ButtonStyle.gray)
+    async def add(self, button: discord.ui.Button, interaction: discord.Interaction):
+        if interaction.user.id == self.players[self.playerTurn]:
+            self.addTurn()
+            self.c4Board = addToken(self.c4Board, self.cursor, self.playerTurn)
+            hasWin = checkConnect4Winner(self.c4Board, self.playerTurn)
+            if not hasWin:
+                await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], customEmoji=self.emoji))
+            else:
+                self.playerTurn = not self.playerTurn
+                for child in self.children:
+                    child.disabled = True
+                await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], customEmoji=self.emoji, hasWon=True), view=self)
+                self.stop()
+
+    @discord.ui.button(label='right', style=discord.ButtonStyle.gray)
+    async def right(self, button: discord.ui.Button, interaction: discord.Interaction):
+        if interaction.user.id == self.players[self.playerTurn]:
+            self.cursor += 1 if self.cursor < 6 else 0
+            await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], customEmoji=self.emoji))
+
+    @discord.ui.button(label='maxRight', style=discord.ButtonStyle.gray)
+    async def maxRight(self, button: discord.ui.Button, interaction: discord.Interaction):
+        if interaction.user.id == self.players[self.playerTurn]:
+            self.cursor = 6
+            await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], customEmoji=self.emoji))
+
+def addToken(board: list, cursor, player):
+    for i in range(len(board)):
+        if board[i][cursor] == 1 or board[i][cursor] == 0:
+            continue
+        else: 
+            board[i][cursor] = player
+            return board
+    return board
+
+def toDiscordString(board: list, cursor: int, userId: int, customEmoji = None, hasWon = False):
+    formattedBoard = "<:air:927935249982300251>"
+    for c in range(7):
+        if c == cursor:
+            formattedBoard += '🔻'
+        else: formattedBoard += '<:air:927935249982300251>'
+    formattedBoard += '<:air:927935249982300251>\n'
+    for i in range(len(board) - 1, -1, -1):
+        formattedBoard += '❕'
+        for j in range(len(board[i])):
+            if board[i][j] == 1:
+                formattedBoard += '🔴' if customEmoji is None else customEmoji
+            elif board[i][j] == 0:
+                formattedBoard += '🟡'
+            elif board[i][j] == -1:
+                formattedBoard += '<:air:927935249982300251>'
+        formattedBoard += '❕\n'
+    formattedBoard += '➖➖➖➖➖➖➖➖➖'
+    formattedBoard += f'<@{userId}>\'s turn' if not hasWon else f"<@{userId}> has won ! 🥳"
+    return formattedBoard
+
+def checkConnect4Winner(board, player):
+    for i in range(len(board)):
+        for j in range(len(board[i])):
+            try:
+                if board[i][j] == player and board[i + 1][j] == player and board[i + 2][j] == player and board[i + 3][j] == player:
+                    return True
+                if board[i][j] == player and board[i][j + 1] == player and board[i][j + 2] == player and board[i][j + 3] == player:
+                    return True
+                if board[i][j] == player and board[i + 1][j + 1] == player and board[i + 2][j + 2] == player and board[i + 3][j + 3] == player:
+                    return True
+            except IndexError:
+                return False
+    return False
+
+if os.path.isfile('./messages.pkl'):
+    with open('messages.pkl', 'rb') as f:
+        usersMessages = pickle.load(f)
+else:
+    with open('messages.pkl', 'wb'): pass
+
+if os.path.isfile('./bingo.pkl'):
+    with open('bingo.pkl', 'rb') as f:
+        emptyBingo = pickle.load(f)
+else:
+    with open('bingo.pkl', 'wb'): pass
+
+if not os.path.isfile('./tempBingo.png'):
+    crossBingo(-2, -1, True)
+
+if os.path.isfile('./titleAlts.pkl'):
+    with open('titleAlts.pkl', 'rb') as f:
+        titleAlts = pickle.load(f)
+else:
+    with open('titleAlts.pkl', 'wb'): pass

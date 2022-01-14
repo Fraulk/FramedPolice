@@ -1,205 +1,12 @@
 import os
-import re
 import time
-import pickle
 import random
-import discord
 import datetime
-import firebase_admin
-from firebase_admin import db
-from dotenv import load_dotenv
-from discord.ext import commands
-from firebase_admin import credentials
 
 from vars import *
 from functions import *
 
 # pip install -U git+https://github.com/Rapptz/discord.py
-load_dotenv()
-API_KEY = os.getenv("API_KEY")
-DB_URL = os.getenv("DB_URL")
-cred = credentials.Certificate("./secret.json")
-SLapp = firebase_admin.initialize_app(cred, {'databaseURL': DB_URL})
-ref = db.reference("/")
-intents = discord.Intents.default()
-intents.members = True
-bot = commands.Bot(command_prefix='!', intents=intents, help_command=None)
-
-class UserMessage:
-    def __init__(self, id, name, time, count, reachedLimit):
-        self.id = id
-        self.name = name
-        self.time = time
-        self.count = count
-        self.reachedLimit = reachedLimit
-
-usersMessages = []
-
-async def checkMessage(message):
-    userId = message.author.id
-    print(message.created_at)
-    embeds = message.embeds
-    attachmentCount = message.attachments
-    DMChannel = await message.author.create_dm()
-    if len(attachmentCount) > 1:
-        await DMChannel.send(f"Please post your shots one by one.")
-        await message.delete()
-    if len(attachmentCount) == 0 and len(embeds) == 0:
-        print('ignored')
-        return
-    #     await DMChannel.send(f"Please do not talk in this channel.")
-    #     await message.delete()
-    print("Attachment count:", len(attachmentCount))
-    print("Embeds count:", len(embeds))
-    for msg in usersMessages:
-        if msg.id == userId:
-            endTime = msg.time + DELAY
-            remainingTime = DELAY - (time.time() - msg.time)
-            if msg.count == LIMIT - 1: msg.reachedLimit = True
-            print("Current Time:", endTime)
-            if time.time() <= endTime:
-                if msg.count >= LIMIT:
-                    print("Deleted")
-                    await DMChannel.send(f"Sorry but you can't post more than **{LIMIT}** shots per day.\nThe next time you can post is **<t:{round(endTime)}:F>** so in **{datetime.timedelta(seconds=round(remainingTime))}**")
-                    await message.delete()
-            else:
-                msg.time = time.time()
-                msg.count = 0
-                msg.reachedLimit = False
-            msg.count += 1
-            print(
-                f"UserId:{msg.id} Time of first message: {msg.time} Number of messages: {msg.count} By: {msg.name}\n---------------------------------------------------------------------------------------------------------------"
-            )
-            return
-    usersMessages.append(UserMessage(userId, message.author.name + "#" + message.author.discriminator, time.time(), 1, False))
-    print(f"UserId:{userId} Time of first message: {time.time()} Number of messages: {1} By: {message.author.name}#{message.author.discriminator}\n---------------------------------------------------------------------------------------------------------------")
-
-async def save():
-    with open('messages.pkl', 'wb') as f:
-        pickle.dump(usersMessages, f)
-
-def saveBingo():
-    with open('bingo.pkl', 'wb') as f:
-        pickle.dump(emptyBingo, f)
-
-async def secondLook(message):
-    userDict = {}
-    links = re.findall("(https:\/\/discord.com\/channels\/.*\/.*\d)(?:| )", message.content)
-    if len(links) == 0: return
-    print("---------------------------------------- Building second-look message for " + message.author.name + "#" + message.author.discriminator)
-    async with message.channel.typing():
-        for link in links:
-            slink = link.split("/")
-            original_message = await bot.get_guild(int(slink[-3])).get_channel(int(slink[-2])).fetch_message(int(slink[-1]))
-            # print(original_message.author.name + "#" + original_message.author.discriminator)
-            # print(original_message.attachments[0].url)
-            tempDict = {}
-            tempDict['name'] = original_message.author.name + "#" + original_message.author.discriminator
-            tempDict['imageUrl'] = original_message.attachments[0].url
-            tempDict['width'] = original_message.attachments[0].width
-            tempDict['height'] = original_message.attachments[0].height
-            tempDict['messageUrl'] = link
-            userDict[str(original_message.id)] = tempDict
-    await bot.get_channel(SLChannel).send(f"Here is your link : https://second-look.netlify.app?id={message.author.id}")
-    print("---------------------------------------- Building ended")
-    ref.child(str(message.author.id)).set(userDict)
-
-class EphemeralBingo(View):
-
-    def __init__(self, ctx, timeout = None):
-        super().__init__(timeout=timeout)
-        self.chanId = ctx.channel.id
-        
-    @discord.ui.button(label='Check', style=discord.ButtonStyle.blurple)
-    async def checkCompact(self, button: discord.ui.Button, interaction: discord.Interaction):
-        try:
-            padawan = interaction.user.guild.get_role(PadawanRole)
-        except AttributeError:
-            await interaction.response.send_message("Sorry but you can only play bingo in the Framed server", ephemeral=True)
-            return
-        if padawan is None:
-            await interaction.response.send_message("Sorry but you can only play bingo in the Framed server", ephemeral=True)
-        else:
-            if padawan in interaction.user.roles:
-                await interaction.response.send_message("Sorry! Members with padawan role aren't currently eligible to play the bingo right now.", ephemeral=True)
-            else:
-                await interaction.response.send_message("Choose a box", view=BingoView(params={'compact': True, 'user': interaction.user, 'channel': self.chanId}), ephemeral=True)
-
-class BingoView(View):
-
-    def __init__(self, params, timeout = None):
-        super().__init__(timeout=timeout)
-        if not params.get('compact'): params['compact'] = False
-        self.user = params['user']
-        self.channel = params['channel']
-        self.board = self.getScore()
-        for x in range(5):
-            for y in range(5):
-                if params['compact']: self.add_item(BingoViewButton(x, y, f"{x+1}-{y+1}", self.board, self.user.avatar))
-                if not params['compact']: self.add_item(BingoViewButton(x, y, bingoText[y][x], self.board, self.user.avatar))
-
-    def getScore(self):
-        # for bp in bingoPoints:
-        #     if bp.id == self.user.id:
-        #         return bp.pointMap
-        # bingoPoints.append(BingoPoints(self.user.id, self.user.name))
-        return emptyBingo
-
-    def setScore(self, x, y):
-        print(f"{self.user.name} checked the {x+1}-{y+1} case")
-        emptyBingo[x][y] = 1
-        for bp in bingoPoints:
-            if bp.id == self.user.id:
-                # bp.pointMap[x][y] = 1
-                return True
-        bingoPoints.append(BingoPoints(self.user.id, self.user.name))
-
-    def checkWinner(self):
-        for horizontal in self.board:
-            value = sum(horizontal)
-            if value == 5:
-                return self.user
-        for vertical in range(5):
-            value = self.board[0][vertical] + self.board[1][vertical] + self.board[2][vertical] + self.board[3][vertical] + self.board[4][vertical]
-            if value == 5:
-                return self.user
-        diagBLTR = self.board[0][4] + self.board[1][3] + self.board[2][2] + self.board[3][1] + self.board[4][0]
-        if diagBLTR == 5:
-            return self.user
-        diagTLBR = self.board[0][0] + self.board[1][1] + self.board[2][2] + self.board[3][3] + self.board[4][4]
-        if diagTLBR == 5:
-            return self.user
-        return None
-    # https://github.com/Rapptz/discord.py/blob/45d498c1b76deaf3b394d17ccf56112fa691d160/examples/views/tic_tac_toe.py
-
-class BingoViewButton(Button):
-    def __init__(self, x, y, label, board, avatar):
-        if board[x][y] == 1:
-            super().__init__(label=label, style=discord.ButtonStyle.success, disabled=True, row=y)
-        if board[x][y] == 0:
-            super().__init__(label=label, style=discord.ButtonStyle.secondary, row=y)
-        self.x = x
-        self.y = y
-        self.label = label if label != "3-3" else "Free"
-        self.avatar = avatar
-    
-    async def callback(self, interaction: discord.Interaction):
-        assert self.view is not None
-        view = self.view
-        view.setScore(self.x, self.y)
-        userAvatar = self.avatar.with_size(256) if self.avatar != None else None
-        saveBingo()
-        crossBingo(self.x, self.y, False, userAvatar)
-
-        self.style = discord.ButtonStyle.success
-        self.disabled = True
-        for child in view.children:
-            child.disabled = True
-        await interaction.response.edit_message(view=view)
-
-        winner = view.checkWinner()
-        if winner is not None:
-            bot.dispatch("bingo_winner", view.user, view.channel)
 
 @bot.event
 async def on_ready():
@@ -520,6 +327,86 @@ async def on_bingo_winner(user, channelId):
     channel = bot.get_channel(channelId)
     await channel.send("The bingo has been completed !", file=discord.File('./lastBingo.png'))
 
+@commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
+@bot.command(name="addTitle", help="Add a game title and all his alts")
+async def addTitle(ctx, *args):
+    global titleAlts
+    simpleArg = None
+    simpleName = None
+    args = ' '.join(args)
+    args = args.replace("'", "\\'")
+    if args == '': return
+    if args.find(';') > -1:
+        simpleArg = args.split(';')[1].lstrip(' ')
+        simpleName = args.split(';')[0].rstrip(' ')
+        if simpleArg == '' or simpleName == '': return
+        if simpleArg.find(',') > -1:
+            simpleArg = simpleArg.split(',')
+            simpleArg = [e.lstrip(' ').rstrip(' ') for e in simpleArg]
+        index = next((i for i, item in enumerate(titleAlts) if item.get(simpleName) is not None), None)
+        if index is not None:
+            titleAlts[index][simpleName].append(simpleArg) if isinstance(simpleArg, str) else titleAlts[index][simpleName].extend(simpleArg)
+        else:
+            alts = {}
+            alts[simpleName] = [simpleArg] if isinstance(simpleArg, str) else simpleArg
+            titleAlts.append(alts)
+        saveTitleAlts()
+        await ctx.message.add_reaction('✅')
+        # print(titleAlts)
+        # print(next((i for i, item in enumerate(titleAlts) if simpleArg in item[simpleName]), None))
+
+@commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
+@bot.command(name="removeTitle", help="Remove a game title and all his alts")
+async def removeTitle(ctx, *args):
+    global titleAlts
+    args = ' '.join(args)
+    args = args.replace("'", "\\'")
+    if args == '': return
+    titleAlts[:] = [d for d in titleAlts if d.get(args) is None]
+    saveTitleAlts()
+    await ctx.message.add_reaction('✅')
+
+@bot.command(name="showTitle", help="Remove a game title and all his alts")
+async def showTitle(ctx, *args):
+    global titleAlts
+    content = ""
+    args = ' '.join(args)
+    args = args.replace("'", "\\'")
+    if args == '':
+        i = 0
+        for d in titleAlts:
+            gameTitle = next(iter(d))
+            content += f"**{gameTitle}** : {', '.join(d.get(gameTitle))}\n"
+            if i % 15 == 0:
+                await ctx.send(content if len(content) < 2000 else "Too much data to send, <@192300712049246208> failed his job so please bully him and make him fix me")
+                content = ""
+            i += 1
+    else:
+        index = next((i for i, item in enumerate(titleAlts) if item.get(args) is not None), None)
+        if index is not None:
+            gameTitle = next(iter(titleAlts[index]))
+            content += f"**{gameTitle}** : {', '.join(titleAlts[index].get(args))}"
+        else:
+            content = "Unknown game"
+    await ctx.send(content if len(content) < 2000 else "Too much data to send, <@192300712049246208> failed his job so please bully him and make him fix me")
+
+@bot.command(name="connect")
+async def connect(ctx, arg, arg2):
+    view = Confirm([ctx.message.author.id, ctx.message.mentions[0].id], arg2)
+    await ctx.send(content=f"{ctx.message.author.mention} wants to play connect4 with you {ctx.message.mentions[0].mention}, will you accept ?", view=view)
+    # Wait for the View to stop listening for input...
+    await view.wait()
+
+@bot.command(name='golf')
+async def golf(ctx, *args):
+    content = golfEmoji
+    await ctx.send(content)
+
+@bot.command(name='mario')
+async def mario(ctx, *args):
+    content = marioEmoji
+    await ctx.send(content)
+
 @bot.command(name='help')
 async def help(ctx, *args):
     e = discord.Embed(title="List of commands",
@@ -548,9 +435,10 @@ async def help(ctx, *args):
             e.add_field(name=helpMsg['resetBingo']['name'], value=helpMsg['resetBingo']['description'], inline=False)
             e.add_field(name=helpMsg['changeBingo']['name'], value=helpMsg['changeBingo']['description'], inline=False)
     e.add_field(name=helpMsg['bingo']['name'], value=helpMsg['bingo']['description'], inline=False)
+    e.add_field(name=helpMsg['connect']['name'], value=helpMsg['connect']['description'], inline=False)
     e.add_field(name=helpMsg['special']['name'], value=helpMsg['special']['description'], inline=False)
     # e.set_image(url="https://cdn.discordapp.com/emojis/575642684006334464.png?size=40")
-    e.set_footer(text="Made by Fraulk", icon_url="https://cdn.discordapp.com/avatars/192300712049246208/a_c7d1c089c53b152ed0b3b00304fa3307.webp?size=40")
+    e.set_footer(text="Made by Fraulk", icon_url="https://cdn.discordapp.com/avatars/192300712049246208/0663e3577e2759aa2ee0b75a4ec8f0cc.webp?size=128")
     # does the gif version of my pfp still exists after nitro ends ? https://cdn.discordapp.com/avatars/192300712049246208/a_c7d1c089c53b152ed0b3b00304fa3307.gif?size=40
     await ctx.send(embed=e)
 
@@ -570,22 +458,6 @@ async def help(ctx, *args):
 # FIXME : !tools watch dogs 2 has embeds, same for nier
 # TODO : make the bot detect birthday on message
 # TODO : add dropdown and buttons to tools
-# TODO : padawan role shouldn't play bingo, say something like "Sorry! You're not currently eligible to play the bingo right now." whenever a padawan presses the check button
 # TODO : i should adapt the code for tiny pfp
-
-if os.path.isfile('./messages.pkl'):
-    with open('messages.pkl', 'rb') as f:
-        usersMessages = pickle.load(f)
-else:
-    with open('messages.pkl', 'wb'): pass
-
-if os.path.isfile('./bingo.pkl'):
-    with open('bingo.pkl', 'rb') as f:
-        emptyBingo = pickle.load(f)
-else:
-    with open('bingo.pkl', 'wb'): pass
-
-if not os.path.isfile('./tempBingo.png'):
-    crossBingo(-2, -1, True)
 
 bot.run(API_KEY)

@@ -1,3 +1,11 @@
+import os
+import discord
+import firebase_admin
+from firebase_admin import db
+from dotenv import load_dotenv
+from discord.ext import commands
+from firebase_admin import credentials
+
 PROD = True
 # 86400 : 24h
 # 43200 : 12h
@@ -12,6 +20,16 @@ LeftChannel = 873242046675169310 if PROD else 874368324023255131
 SYSChannel = 549986930071175169 if PROD else 873627093840314401
 SLChannel = 859492383845646346 if PROD else 889793521106714634
 IntroChannel = 872825951011082291 if PROD else 898977778039390268
+
+load_dotenv()
+API_KEY = os.getenv("API_KEY")
+DB_URL = os.getenv("DB_URL")
+cred = credentials.Certificate("./secret.json")
+SLapp = firebase_admin.initialize_app(cred, {'databaseURL': DB_URL})
+ref = db.reference("/")
+intents = discord.Intents.default()
+intents.members = True
+bot = commands.Bot(command_prefix='!', intents=intents, help_command=None)
 
 badBot = {
     'batmanSlap': {
@@ -236,6 +254,10 @@ helpMsg = {
         'name': '!changeBingo',
         'description': 'Change the bingo image with the attached png file in your command\n(change takes effect at the next round)'
     },
+    'connect': {
+        'name': '!connect @someone :emoji:',
+        'description': 'Starts a connect4 game against @someone, with an optionnal emoji replacing your token'
+    },
     'special': {
         'name': 'Special reaction',
         'description': 'The bot has special reaction for some query : "good|bad|horny bot"'
@@ -259,3 +281,29 @@ emptyBingo = [
     [0, 0, 0, 0, 0], 
     [0, 0, 0, 0, 0]
 ]
+
+titleAlts = []
+
+golfEmoji = """
+        🤸 
+        <:air:927935249982300251> 🦽 🏌️
+    """
+
+marioEmoji = """
+<:air:927935249982300251><:air:927935249982300251><:air:927935249982300251>🟥🟥🟥🟥🟥<:air:927935249982300251><:air:927935249982300251><:air:927935249982300251><:air:927935249982300251>
+<:air:927935249982300251><:air:927935249982300251>🟥🟥🟥🟥🟥🟥🟥🟥🟥<:air:927935249982300251>
+<:air:927935249982300251><:air:927935249982300251>🟫🟫🟫🟨🟨⬛🟨<:air:927935249982300251><:air:927935249982300251><:air:927935249982300251>
+<:air:927935249982300251>🟫🟨🟫🟨🟨🟨⬛🟨🟨🟨<:air:927935249982300251>
+<:air:927935249982300251>🟫🟨🟫🟫🟨🟨🟨🟫🟨🟨🟨
+<:air:927935249982300251>🟫🟫🟨🟨🟨🟨🟫🟫🟫🟫<:air:927935249982300251>
+<:air:927935249982300251><:air:927935249982300251><:air:927935249982300251>🟨🟨🟨🟨🟨🟨<:air:927935249982300251><:air:927935249982300251><:air:927935249982300251>
+<:air:927935249982300251><:air:927935249982300251>🟥🟥🟦🟥🟥🟦🟥🟥<:air:927935249982300251><:air:927935249982300251>
+<:air:927935249982300251>🟥🟥🟥🟦🟥🟥🟦🟥🟥🟥<:air:927935249982300251>
+🟥🟥🟥🟥🟦🟦🟦🟦🟥🟥🟥🟥
+🟨🟨🟥🟦🟧🟦🟦🟧🟦🟥🟨🟨
+🟨🟨🟨🟦🟦🟦🟦🟦🟦🟨🟨🟨
+🟨🟨🟦🟦🟦🟦🟦🟦🟦🟦🟨🟨
+<:air:927935249982300251><:air:927935249982300251>🟦🟦🟦<:air:927935249982300251><:air:927935249982300251>🟦🟦🟦<:air:927935249982300251><:air:927935249982300251>
+<:air:927935249982300251><:air:927935249982300251>🟫🟫<:air:927935249982300251><:air:927935249982300251><:air:927935249982300251><:air:927935249982300251>🟫🟫<:air:927935249982300251><:air:927935249982300251>
+<:air:927935249982300251>🟫🟫🟫<:air:927935249982300251><:air:927935249982300251><:air:927935249982300251><:air:927935249982300251>🟫🟫🟫<:air:927935249982300251>
+    """

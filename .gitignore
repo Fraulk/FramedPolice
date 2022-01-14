@@ -1,8 +1,12 @@
 .env
 messages.pkl
 bingo.pkl
+titleAlts.pkl
 test.py
 secret.json
 temp.jpg
 tempBingo.png
+lastBingo.png
 __pycache__
+hof*
+shotsdb.json
