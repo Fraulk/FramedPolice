@@ -391,7 +391,7 @@ async def showTitle(ctx, *args):
     await ctx.send(content if len(content) < 2000 else "Too much data to send, <@192300712049246208> failed his job so please bully him and make him fix me")
 
 @bot.command(name="connect")
-async def connect(ctx, arg, arg2):
+async def connect(ctx, arg, arg2 = None):
     view = Confirm([ctx.message.author.id, ctx.message.mentions[0].id], arg2)
     await ctx.send(content=f"{ctx.message.author.mention} wants to play connect4 with you {ctx.message.mentions[0].mention}, will you accept ?", view=view)
     # Wait for the View to stop listening for input...
