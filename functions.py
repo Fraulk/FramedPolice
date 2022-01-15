@@ -542,6 +542,8 @@ def checkConnect4Winner(board, player):
                     return True
                 if board[i][j] == player and board[i + 1][j + 1] == player and board[i + 2][j + 2] == player and board[i + 3][j + 3] == player:
                     return True
+                if board[i][j] == player and board[i + 1][j - 1] == player and board[i + 2][j - 2] == player and board[i + 3][j - 3] == player:
+                    return True
             except IndexError:
                 return False
     return False
