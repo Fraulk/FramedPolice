@@ -458,49 +458,112 @@ class Connect4(View):
         self.players = players
         self.turns = 2
         self.playerTurn = 1
+        self.blockedCol = False
+        self.replay = []
 
     def addTurn(self):
         self.playerTurn = self.turns % 2
         self.turns += 1
 
-    @discord.ui.button(label='maxLeft', style=discord.ButtonStyle.gray)
+    def checkConnect4Winner(self, player):
+        for y in range(len(self.c4Board)):
+            for x in range(len(self.c4Board[y])):
+                # having an negative index doesn't give an indexError but check from the list's end, but an index superior to the list's length throw an exception, so first check is
+                # ifx or y superior to their max length and checking at the end if they're negative
+                try:
+                    if x + 3 < 7 and self.c4Board[y][x] == player and self.c4Board[y][x + 1] == player and self.c4Board[y][x + 2] == player and self.c4Board[y][x + 3] == player:
+                        self.markWinningBoard([[y, x], [y, x + 1], [y, x + 2], [y, x + 3]], player)
+                        return True
+                    if x + 3 < 7 and y + 3 < 6 and self.c4Board[y][x] == player and self.c4Board[y + 1][x + 1] == player and self.c4Board[y + 2][x + 2] == player and self.c4Board[y + 3][x + 3] == player:
+                        self.markWinningBoard([[y, x], [y + 1, x + 1], [y + 2, x + 2], [y + 3, x + 3]], player)
+                        return True
+                    if y + 3 < 6 and self.c4Board[y][x] == player and self.c4Board[y + 1][x] == player and self.c4Board[y + 2][x] == player and self.c4Board[y + 3][x] == player:
+                        self.markWinningBoard([[y, x], [y + 1, x], [y + 2, x], [y + 3, x]], player)
+                        return True
+                    if y + 3 < 6 and self.c4Board[y][x] == player and self.c4Board[y + 1][x - 1] == player and self.c4Board[y + 2][x - 2] == player and self.c4Board[y + 3][x - 3] == player and x - 3 > -1:
+                        self.markWinningBoard([[y, x], [y + 1, x - 1], [y + 2, x - 2], [y + 3, x - 3]], player)
+                        return True
+                    if self.c4Board[y][x] == player and self.c4Board[y][x - 1] == player and self.c4Board[y][x - 2] == player and self.c4Board[y][x - 3] == player and x - 3 > -1:
+                        self.markWinningBoard([[y, x], [y, x - 1], [y, x - 2], [y, x - 3]], player)
+                        return True
+                    if self.c4Board[y][x] == player and self.c4Board[y - 1][x - 1] == player and self.c4Board[y - 2][x - 2] == player and self.c4Board[y - 3][x - 3] == player and x - 3 > -1 and y - 3 > -1:
+                        self.markWinningBoard([[y, x], [y - 1, x - 1], [y - 2, x - 2], [y - 3, x - 3]], player)
+                        return True
+                    if self.c4Board[y][x] == player and self.c4Board[y - 1][x] == player and self.c4Board[y - 2][x] == player and self.c4Board[y - 3][x] == player and y - 3 > -1:
+                        self.markWinningBoard([[y, x], [y - 1, x], [y - 2, x], [y - 3, x]], player)
+                        return True
+                    if x + 3 < 7 and self.c4Board[y][x] == player and self.c4Board[y - 1][x + 1] == player and self.c4Board[y - 2][x + 2] == player and self.c4Board[y - 3][x + 3] == player and y - 3 > -1:
+                        self.markWinningBoard([[y, x], [y - 1, x + 1], [y - 2, x + 2], [y - 3, x + 3]], player)
+                        return True
+                except IndexError:
+                    print("got an indexError on", x, y)
+                    continue
+        return False
+
+    def checkTie(self):
+        for y in self.c4Board:
+            tie = all(dot != -1 for dot in y)
+            if not tie: return False
+        return tie
+
+    def markWinningBoard(self, dots: list[list], player):
+        for dot in dots:
+            self.c4Board[dot[0]][dot[1]] = 2 if player == 0 else 3
+
+    @discord.ui.button(label='', style=discord.ButtonStyle.gray, emoji="⏪")
     async def maxLeft(self, button: discord.ui.Button, interaction: discord.Interaction):
         if interaction.user.id == self.players[self.playerTurn]:
+            if self.children[2].disabled: self.children[2].disabled = False
             self.cursor = 0
-            await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], customEmoji=self.emoji))
+            if self.c4Board[5][self.cursor] != -1:
+                self.children[2].disabled = True
+            await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], customEmoji=self.emoji), view=self)
 
-    @discord.ui.button(label='left', style=discord.ButtonStyle.gray)
+    @discord.ui.button(label='', style=discord.ButtonStyle.gray, emoji="◀️")
     async def left(self, button: discord.ui.Button, interaction: discord.Interaction):
         if interaction.user.id == self.players[self.playerTurn]:
+            if self.children[2].disabled: self.children[2].disabled = False
             self.cursor -= 1 if self.cursor > 0 else 0
-            await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], customEmoji=self.emoji))
+            if self.c4Board[5][self.cursor] != -1:
+                self.children[2].disabled = True
+            await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], customEmoji=self.emoji), view=self)
 
-    @discord.ui.button(label='add', style=discord.ButtonStyle.gray)
+    @discord.ui.button(label='', style=discord.ButtonStyle.blurple, emoji="🔽")
     async def add(self, button: discord.ui.Button, interaction: discord.Interaction):
         if interaction.user.id == self.players[self.playerTurn]:
+            if self.children[2].disabled: self.children[2].disabled = False
             self.addTurn()
             self.c4Board = addToken(self.c4Board, self.cursor, self.playerTurn)
-            hasWin = checkConnect4Winner(self.c4Board, self.playerTurn)
-            if not hasWin:
-                await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], customEmoji=self.emoji))
+            hasWin = self.checkConnect4Winner(self.playerTurn)
+            tie = self.checkTie()
+            if not hasWin and not tie:
+                if self.c4Board[5][self.cursor] != -1:
+                    self.children[2].disabled = True
+                await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], customEmoji=self.emoji), view=self)
             else:
                 self.playerTurn = not self.playerTurn
                 for child in self.children:
                     child.disabled = True
-                await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], customEmoji=self.emoji, hasWon=True), view=self)
+                await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], customEmoji=self.emoji, hasWon=hasWin, hasTied=tie), view=self)
                 self.stop()
 
-    @discord.ui.button(label='right', style=discord.ButtonStyle.gray)
+    @discord.ui.button(label='', style=discord.ButtonStyle.gray, emoji="▶️")
     async def right(self, button: discord.ui.Button, interaction: discord.Interaction):
         if interaction.user.id == self.players[self.playerTurn]:
+            if self.children[2].disabled: self.children[2].disabled = False
             self.cursor += 1 if self.cursor < 6 else 0
-            await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], customEmoji=self.emoji))
+            if self.c4Board[5][self.cursor] != -1:
+                self.children[2].disabled = True
+            await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], customEmoji=self.emoji), view=self)
 
-    @discord.ui.button(label='maxRight', style=discord.ButtonStyle.gray)
+    @discord.ui.button(label='', style=discord.ButtonStyle.gray, emoji="⏩")
     async def maxRight(self, button: discord.ui.Button, interaction: discord.Interaction):
         if interaction.user.id == self.players[self.playerTurn]:
+            if self.children[2].disabled: self.children[2].disabled = False
             self.cursor = 6
-            await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], customEmoji=self.emoji))
+            if self.c4Board[5][self.cursor] != -1:
+                self.children[2].disabled = True
+            await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], customEmoji=self.emoji), view=self)
 
 def addToken(board: list, cursor, player):
     for i in range(len(board)):
@@ -511,16 +574,20 @@ def addToken(board: list, cursor, player):
             return board
     return board
 
-def toDiscordString(board: list, cursor: int, userId: int, customEmoji = None, hasWon = False):
+def toDiscordString(board: list, cursor: int, userId: int, customEmoji = None, hasWon = False, hasTied = False):
     formattedBoard = "<:air:927935249982300251>"
     for c in range(7):
         if c == cursor:
-            formattedBoard += '🔻'
+            formattedBoard += '<a:c4_redCursor:933719793792602132>'
         else: formattedBoard += '<:air:927935249982300251>'
     formattedBoard += '<:air:927935249982300251>\n'
     for i in range(len(board) - 1, -1, -1):
         formattedBoard += '❕'
         for j in range(len(board[i])):
+            if board[i][j] == 3:
+                formattedBoard += '<a:c4_redBlink:933719867469758534>'
+            if board[i][j] == 2:
+                formattedBoard += '<a:c4_yellowBlink:933719867360677898>'
             if board[i][j] == 1:
                 formattedBoard += '🔴' if customEmoji is None else customEmoji
             elif board[i][j] == 0:
@@ -529,24 +596,10 @@ def toDiscordString(board: list, cursor: int, userId: int, customEmoji = None, h
                 formattedBoard += '<:air:927935249982300251>'
         formattedBoard += '❕\n'
     formattedBoard += '➖➖➖➖➖➖➖➖➖'
-    formattedBoard += f'<@{userId}>\'s turn' if not hasWon else f"<@{userId}> has won ! 🥳"
+    if not hasTied:
+        formattedBoard += f'<@{userId}>\'s turn' if not hasWon else f"<@{userId}> has won ! 🥳"
+    else: formattedBoard += "It's a tie..."
     return formattedBoard
-
-def checkConnect4Winner(board, player):
-    for i in range(len(board)):
-        for j in range(len(board[i])):
-            try:
-                if board[i][j] == player and board[i + 1][j] == player and board[i + 2][j] == player and board[i + 3][j] == player:
-                    return True
-                if board[i][j] == player and board[i][j + 1] == player and board[i][j + 2] == player and board[i][j + 3] == player:
-                    return True
-                if board[i][j] == player and board[i + 1][j + 1] == player and board[i + 2][j + 2] == player and board[i + 3][j + 3] == player:
-                    return True
-                if board[i][j] == player and board[i + 1][j - 1] == player and board[i + 2][j - 2] == player and board[i + 3][j - 3] == player:
-                    return True
-            except IndexError:
-                return False
-    return False
 
 if os.path.isfile('./messages.pkl'):
     with open('messages.pkl', 'rb') as f:

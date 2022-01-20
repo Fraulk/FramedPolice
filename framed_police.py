@@ -1,6 +1,7 @@
 import os
 import time
 import random
+# import asyncio
 import datetime
 
 from vars import *
@@ -407,6 +408,15 @@ async def mario(ctx, *args):
     content = marioEmoji
     await ctx.send(content)
 
+# @bot.command(name='shocked')
+# async def shocked(ctx, *args):
+#     content = shockedFrames['shocked0']
+#     message = await ctx.send(content)
+#     for i in range(20):
+#         for key, frame in shockedFrames.items():
+#             await asyncio.sleep(1)
+#             await message.edit(content=frame)
+
 @bot.command(name='help')
 async def help(ctx, *args):
     e = discord.Embed(title="List of commands",
@@ -455,9 +465,8 @@ async def help(ctx, *args):
 # FIXME : remove spaces from links, test with cyberpunk, bal
 # FIXME : !tools la throws index out of range
 # FIXME : !tools halo throws error
-# FIXME : !tools watch dogs 2 has embeds, same for nier
 # TODO : make the bot detect birthday on message
-# TODO : add dropdown and buttons to tools
 # TODO : i should adapt the code for tiny pfp
+# TODO : when !connect without mention, let every one to be the opponent
 
 bot.run(API_KEY)
