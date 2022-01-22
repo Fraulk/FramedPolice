@@ -412,6 +412,12 @@ def recreateBingo(bingo):
             if bingo[i][j] == 1:
                 crossBingo(i, j, False)
 
+def resetBingoBoard():
+    bingoPoints.clear()
+    global emptyBingo
+    emptyBingo = [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]
+    crossBingo(-2, -1, True)
+
 class Confirm(View):
     def __init__(self, players: list[str], customEmoji = None):
         super().__init__()
@@ -515,6 +521,7 @@ class Connect4(View):
         if interaction.user.id == self.players[self.playerTurn]:
             if self.children[2].disabled: self.children[2].disabled = False
             self.cursor = 0
+            self.replay.append("maxLeft")
             if self.c4Board[5][self.cursor] != -1:
                 self.children[2].disabled = True
             await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], customEmoji=self.emoji), view=self)
@@ -524,6 +531,7 @@ class Connect4(View):
         if interaction.user.id == self.players[self.playerTurn]:
             if self.children[2].disabled: self.children[2].disabled = False
             self.cursor -= 1 if self.cursor > 0 else 0
+            self.replay.append("left")
             if self.c4Board[5][self.cursor] != -1:
                 self.children[2].disabled = True
             await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], customEmoji=self.emoji), view=self)
@@ -539,11 +547,13 @@ class Connect4(View):
             if not hasWin and not tie:
                 if self.c4Board[5][self.cursor] != -1:
                     self.children[2].disabled = True
+                self.replay.append("add")
                 await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], customEmoji=self.emoji), view=self)
             else:
                 self.playerTurn = not self.playerTurn
                 for child in self.children:
                     child.disabled = True
+                print(self.replay)
                 await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], customEmoji=self.emoji, hasWon=hasWin, hasTied=tie), view=self)
                 self.stop()
 
@@ -552,6 +562,7 @@ class Connect4(View):
         if interaction.user.id == self.players[self.playerTurn]:
             if self.children[2].disabled: self.children[2].disabled = False
             self.cursor += 1 if self.cursor < 6 else 0
+            self.replay.append("right")
             if self.c4Board[5][self.cursor] != -1:
                 self.children[2].disabled = True
             await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], customEmoji=self.emoji), view=self)
@@ -561,6 +572,7 @@ class Connect4(View):
         if interaction.user.id == self.players[self.playerTurn]:
             if self.children[2].disabled: self.children[2].disabled = False
             self.cursor = 6
+            self.replay.append("maxRight")
             if self.c4Board[5][self.cursor] != -1:
                 self.children[2].disabled = True
             await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], customEmoji=self.emoji), view=self)
