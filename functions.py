@@ -553,8 +553,8 @@ class Connect4(View):
                 self.playerTurn = not self.playerTurn
                 for child in self.children:
                     child.disabled = True
-                print(self.replay)
-                await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], customEmoji=self.emoji, hasWon=hasWin, hasTied=tie), view=self)
+                self.replay.append("add")
+                await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], customEmoji=self.emoji, hasWon=hasWin, hasTied=tie, replay=self.replay), view=self)
                 self.stop()
 
     @discord.ui.button(label='', style=discord.ButtonStyle.gray, emoji="▶️")
@@ -586,7 +586,7 @@ def addToken(board: list, cursor, player):
             return board
     return board
 
-def toDiscordString(board: list, cursor: int, userId: int, customEmoji = None, hasWon = False, hasTied = False):
+def toDiscordString(board: list, cursor: int, userId: int, customEmoji = None, hasWon = False, hasTied = False, replay = []):
     formattedBoard = "<:air:927935249982300251>"
     for c in range(7):
         if c == cursor:
@@ -611,6 +611,7 @@ def toDiscordString(board: list, cursor: int, userId: int, customEmoji = None, h
     if not hasTied:
         formattedBoard += f'<@{userId}>\'s turn' if not hasWon else f"<@{userId}> has won ! 🥳"
     else: formattedBoard += "It's a tie..."
+    if hasWon: formattedBoard += f"\nReplay : https://connect4-replay.netlify.app/?data={'-'.join(map(str, replay))}"
     return formattedBoard
 
 if os.path.isfile('./messages.pkl'):
