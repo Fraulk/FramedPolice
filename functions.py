@@ -438,7 +438,7 @@ class Confirm(View):
     @discord.ui.button(label='Confirm', style=discord.ButtonStyle.green)
     async def confirm(self, button: discord.ui.Button, interaction: discord.Interaction):
         if interaction.user.id == self.players[1]:
-            await interaction.response.edit_message(content=toDiscordString(self.connect4, 3, self.players[1], customEmoji=self.emoji), view=Connect4(self.connect4, players=self.players, customEmoji=self.emoji))
+            await interaction.response.edit_message(content=toDiscordString(self.connect4, 3, self.players[1], 1, customEmoji=self.emoji), view=Connect4(self.connect4, players=self.players, customEmoji=self.emoji))
             self.stop()
         else:
             await interaction.response.edit_message(content=f"<@{self.players[0]}> wants to play connect4 with you <@{self.players[1]}>, will you accept ? PS: Only the mentionned person can respond")
@@ -524,7 +524,7 @@ class Connect4(View):
             self.replay.append("maxLeft")
             if self.c4Board[5][self.cursor] != -1:
                 self.children[2].disabled = True
-            await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], customEmoji=self.emoji), view=self)
+            await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], self.playerTurn, customEmoji=self.emoji), view=self)
 
     @discord.ui.button(label='', style=discord.ButtonStyle.gray, emoji="◀️")
     async def left(self, button: discord.ui.Button, interaction: discord.Interaction):
@@ -534,7 +534,7 @@ class Connect4(View):
             self.replay.append("left")
             if self.c4Board[5][self.cursor] != -1:
                 self.children[2].disabled = True
-            await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], customEmoji=self.emoji), view=self)
+            await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], self.playerTurn, customEmoji=self.emoji), view=self)
 
     @discord.ui.button(label='', style=discord.ButtonStyle.blurple, emoji="🔽")
     async def add(self, button: discord.ui.Button, interaction: discord.Interaction):
@@ -548,13 +548,13 @@ class Connect4(View):
                 if self.c4Board[5][self.cursor] != -1:
                     self.children[2].disabled = True
                 self.replay.append("add")
-                await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], customEmoji=self.emoji), view=self)
+                await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], self.playerTurn, customEmoji=self.emoji), view=self)
             else:
                 self.playerTurn = not self.playerTurn
                 for child in self.children:
                     child.disabled = True
                 self.replay.append("add")
-                await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], customEmoji=self.emoji, hasWon=hasWin, hasTied=tie, replay=self.replay), view=self)
+                await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], self.playerTurn, customEmoji=self.emoji, hasWon=hasWin, hasTied=tie, replay=self.replay), view=self)
                 self.stop()
 
     @discord.ui.button(label='', style=discord.ButtonStyle.gray, emoji="▶️")
@@ -565,7 +565,7 @@ class Connect4(View):
             self.replay.append("right")
             if self.c4Board[5][self.cursor] != -1:
                 self.children[2].disabled = True
-            await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], customEmoji=self.emoji), view=self)
+            await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], self.playerTurn, customEmoji=self.emoji), view=self)
 
     @discord.ui.button(label='', style=discord.ButtonStyle.gray, emoji="⏩")
     async def maxRight(self, button: discord.ui.Button, interaction: discord.Interaction):
@@ -575,7 +575,7 @@ class Connect4(View):
             self.replay.append("maxRight")
             if self.c4Board[5][self.cursor] != -1:
                 self.children[2].disabled = True
-            await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], customEmoji=self.emoji), view=self)
+            await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], self.playerTurn, customEmoji=self.emoji), view=self)
 
 def addToken(board: list, cursor, player):
     for i in range(len(board)):
@@ -586,11 +586,11 @@ def addToken(board: list, cursor, player):
             return board
     return board
 
-def toDiscordString(board: list, cursor: int, userId: int, customEmoji = None, hasWon = False, hasTied = False, replay = []):
+def toDiscordString(board: list, cursor: int, userId: int, player: int, customEmoji = None, hasWon = False, hasTied = False, replay = []):
     formattedBoard = "<:air:927935249982300251>"
     for c in range(7):
         if c == cursor:
-            formattedBoard += '<a:c4_redCursor:933719793792602132>'
+            formattedBoard += '<a:c4_redCursor:933719793792602132>' if player == 0 else '<a:c4_yellowCursor:933719853204906125>'
         else: formattedBoard += '<:air:927935249982300251>'
     formattedBoard += '<:air:927935249982300251>\n'
     for i in range(len(board) - 1, -1, -1):
@@ -609,7 +609,8 @@ def toDiscordString(board: list, cursor: int, userId: int, customEmoji = None, h
         formattedBoard += '❕\n'
     formattedBoard += '➖➖➖➖➖➖➖➖➖'
     if not hasTied:
-        formattedBoard += f'<@{userId}>\'s turn' if not hasWon else f"<@{userId}> has won ! 🥳"
+        formattedBoard += f'<@{userId}>\'s turn' if not hasWon else f"<@{userId}> has won !"
+        formattedBoard += " 🔴" if player == 0 else " 🟡"
     else: formattedBoard += "It's a tie..."
     if hasWon: formattedBoard += f"\nReplay : https://connect4-replay.netlify.app/?data={'-'.join(map(str, replay))}"
     return formattedBoard
