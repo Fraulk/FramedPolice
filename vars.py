@@ -284,6 +284,14 @@ emptyBingo = [
 
 titleAlts = []
 
+framedleButtons = [
+    ["A", "B", "C", "D", "E"],
+    ["F", "G", "H", "I", "J"],
+    ["K", "L", "M", "N", "O"],
+    ["P", "Q", "R", "S", "T"],
+    ["U", "V", "W", "X", "Y"],
+]
+
 golfEmoji = """
         🤸 
         <:air:927935249982300251> 🦽 🏌️

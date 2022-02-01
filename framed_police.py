@@ -6,6 +6,7 @@ import datetime
 
 from vars import *
 from functions import *
+from wordle import *
 
 # pip install -U git+https://github.com/Rapptz/discord.py
 
@@ -410,6 +411,11 @@ async def mario(ctx, *args):
 #         for key, frame in shockedFrames.items():
 #             await asyncio.sleep(1)
 #             await message.edit(content=frame)
+
+@bot.command(name='framedle')
+async def framedle(ctx, *args):
+    framedleView = PlayFramedle()
+    await ctx.send("Play Framedle", view=framedleView)
 
 @bot.command(name='help')
 async def help(ctx, *args):
