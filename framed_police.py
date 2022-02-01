@@ -315,13 +315,10 @@ async def changeBingo(ctx):
 
 @bot.event
 async def on_bingo_winner(user, channelId):
-    bingoPoints.clear()
-    global emptyBingo
-    emptyBingo = [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]
+    resetBingoBoard()
     saveBingo()
     lastBingo = Image.open('./tempBingo.png')
     lastBingo.save('./lastBingo.png')
-    crossBingo(-2, -1, True)
     channel = bot.get_channel(channelId)
     await channel.send("The bingo has been completed !", file=discord.File('./lastBingo.png'))
 
@@ -465,5 +462,6 @@ async def help(ctx, *args):
 # TODO : make the bot detect birthday on message
 # TODO : i should adapt the code for tiny pfp
 # TODO : when !connect without mention, let every one to be the opponent
+# TODO : Would actually help if we had an automated system of sorts, maybe adding a specific reaction on images you think are nice, and then the bot posts your link in the second look channel after a couple of days
 
 bot.run(API_KEY)
