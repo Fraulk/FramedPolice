@@ -34,6 +34,8 @@ async def on_message(message):
     elif message.content.lower() == "horny bot":
         await message.add_reaction(random.choice(hornyReaction))
         await react(message, "horny", bot.user.avatar)
+    elif "https://framedsc.com/HallOfFramed/?" in message.content:
+        await loadImagesFromHOF(message.content, message.channel)
     else:
         return
 

@@ -1,5 +1,6 @@
 import re
 import time
+import json
 import pickle
 import random
 import discord
@@ -274,6 +275,20 @@ async def react(message, reason, botAvatar):
         memeCopy.paste(badGuy, memeInfo['badPosition'])
         memeCopy.save('./temp.jpg', quality=95)
         await message.reply(file=discord.File('temp.jpg'))
+
+async def loadImagesFromHOF(msg, channel):
+    async with channel.typing():
+        epoch = re.findall(r"https:\/\/framedsc\.com\/HallOfFramed\/\?imageId=(\d*)", msg)
+        shotsDb = requests.get('https://raw.githubusercontent.com/originalnicodrgitbot/hall-of-framed-db/main/shotsdb.json')
+        assert shotsDb.status_code == 200, 'Wrong status code'
+        shotsDict = json.loads(shotsDb.content)
+        foundShot = None
+        for shot in shotsDict["_default"].values():
+            if str(epoch[0]) == str(shot["epochTime"]):
+                foundShot = shot
+                break
+        messageContent = f"Here's the shot in question {foundShot['thumbnailUrl']}" if foundShot is not None else "I couldn't find the shot in question sorry !"
+    await channel.send(messageContent)
 
 class BingoPoints:
     def __init__(self, id, name) -> None:
