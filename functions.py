@@ -282,12 +282,14 @@ async def loadImagesFromHOF(msg, channel):
         shotsDb = requests.get('https://raw.githubusercontent.com/originalnicodrgitbot/hall-of-framed-db/main/shotsdb.json')
         assert shotsDb.status_code == 200, 'Wrong status code'
         shotsDict = json.loads(shotsDb.content)
-        foundShot = None
+        foundShot = []
         for shot in shotsDict["_default"].values():
-            if str(epoch[0]) == str(shot["epochTime"]):
-                foundShot = shot
-                break
-        messageContent = f"Here's the shot in question {foundShot['thumbnailUrl']}" if foundShot is not None else "I couldn't find the shot in question sorry !"
+            for epch in epoch:
+                if str(epch) == str(shot["epochTime"]):
+                    foundShot.append(shot)
+        messageContent = ""
+        for fShot in foundShot:
+            messageContent += f"{fShot['shotUrl']}\n"
     await channel.send(messageContent)
 
 class BingoPoints:
