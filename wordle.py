@@ -1,3 +1,4 @@
+import random
 import discord
 from discord.ui import button, View, Button, view
 from discord.interactions import Interaction
@@ -23,7 +24,7 @@ class PlayFramedle(View):
         #     if padawan in interaction.user.roles:
         #         await interaction.response.send_message("Sorry! Members with padawan role aren't currently eligible to play framedle right now.", ephemeral=True)
         #     else:
-                await interaction.response.send_message("Choose a box", view=Framedle(), ephemeral=True)
+                await interaction.response.edit_message(content="Choose a letter", view=Framedle()) #, ephemeral=True
 
 class Framedle(View):
 
@@ -41,30 +42,22 @@ class Framedle(View):
         self.typedWord = ""
         self.lettersPos = []
         self.wordHistory = ""
+        self.turn = 1
+        self.rightGuesses = []
         for x in range(5):
             for y in range(5):
                 self.add_item(FramedleButton(x, y, framedleButtons[y][x], self.board))
 
-    def setScore(self, x, y):
-        print(f"{self.user.name} checked the {x+1}-{y+1} case")
-        emptyBingo[x][y] = 1
-        for bp in bingoPoints:
-            if bp.id == self.user.id:
-                # bp.pointMap[x][y] = 1
-                return True
-        # bingoPoints.append(BingoPoints(self.user.id, self.user.name))
-
     def checkWord(self, givenWord):
-        for letter in givenWord:
-            if letter.lower() in self.word:
-                print("letter in word")
-            else: 
-                print("letter not in word")
-                print(letter)
+        if givenWord == self.word.lower(): return True
+        else: return False
 
-    def checkWinner(self):
-        return None
-    # https://github.com/Rapptz/discord.py/blob/45d498c1b76deaf3b394d17ccf56112fa691d160/examples/views/tic_tac_toe.py
+    def hint(self, typedWord):
+        hint = ""
+        hint += ' '.join([emojiLetters[letters.find(typedLetter.lower())] for typedLetter in typedWord])
+        for pos in range(len(typedWord), len(self.word)):
+            hint += " " + emojiLetters[letters.find(self.word[pos])] if self.word[pos] in self.rightGuesses else " 🔳"
+        return hint
 
 class FramedleButton(Button):
     def __init__(self, x, y, label, board):
@@ -83,25 +76,32 @@ class FramedleButton(Button):
     async def callback(self, interaction: discord.Interaction):
         assert self.view is not None
         view = self.view
-        # view.setScore(self.x, self.y)
-
+        view.typedWord += self.label
+        view.lettersPos.append([self.x, self.y])
         if len(view.typedWord) < view.wordLength:
-            view.typedWord += self.label
-            view.lettersPos.append([self.x, self.y])
-            await interaction.response.edit_message(content=view.typedWord, view=view)
-        else:
-            # hasWin = view.checkWord(view.typedWord)
-            view.wordHistory += view.typedWord
+            await interaction.response.edit_message(content=f"{view.wordHistory}\n{view.hint(view.typedWord)}" if view.turn == 1 else f"{view.wordHistory}{view.hint(view.typedWord)}")
+            return
+
+        hasWon = view.checkWord(view.typedWord.lower())
+        view.wordHistory += "> " + view.typedWord + "\n"
+        for child in view.children:
+            if child.label.lower() in view.word:
+                posTyped = view.typedWord.lower().find(child.label.lower())
+                posWord = view.word.lower().find(child.label.lower())
+                if posTyped > -1 and posTyped == posWord:
+                    child.style = discord.ButtonStyle.success
+                    view.rightGuesses.append(view.word[posWord])
+                elif posTyped > -1 and posTyped != posWord:
+                    if child.style != discord.ButtonStyle.success:
+                        child.style = discord.ButtonStyle.red
+        view.typedWord = ""
+        view.turn += 1
+        hasLost = True if view.turn > 6 else False
+        if hasWon or hasLost:
             for child in view.children:
-                if child.label.lower() in view.word:
-                    posTyped = view.typedWord.find(child.label.lower())
-                    posWord = view.word.find(child.label.lower())
-                    print((posTyped > -1 or posWord > -1) and posTyped == posWord)
-                    if (posTyped > -1 or posWord > -1) and posTyped == posWord:
-                        child.style = discord.ButtonStyle.success
-                    elif (posTyped > -1 or posWord > -1): child.style = discord.ButtonStyle.red
-            view.typedWord = ""
-            await interaction.response.edit_message(content=view.wordHistory, view=view)
+                child.disabled = True
+            view.wordHistory = f"Bravo! The word was `{view.word}`" if hasWon else f"Sorry but you have lost, the word was `{view.word}`"
+        await interaction.response.edit_message(content=view.wordHistory + view.hint(''), view=view)
         # lineEntered = checkWord()
         # self.style = discord.ButtonStyle.success
         # self.disabled = True
@@ -111,4 +111,4 @@ class FramedleButton(Button):
         #     bot.dispatch("bingo_winner", view.user, view.channel)
 
 def getTodayWord():
-    return "photo"
+    return random.choice(framedleWords)

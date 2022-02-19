@@ -258,6 +258,10 @@ helpMsg = {
         'name': '!connect @someone :emoji:',
         'description': 'Starts a connect4 game against @someone, with an optionnal emoji replacing your token'
     },
+    'framedle': {
+        'name': '!framedle',
+        'description': 'Play the framed wordle! The rules differ a little bit from the wordle'
+    },
     'special': {
         'name': 'Special reaction',
         'description': 'The bot has special reaction for some query : "good|bad|horny bot"'
@@ -321,3 +325,12 @@ shockedFrames = {
     'shocked0' : "<:air:927935249982300251>🤏😎",
     'shocked1' : "🤏🕶️😳",
 }
+
+framedleWords = [
+    "photo", "skall", "berdu", "cheat", "putsos", "framed", "bot", "bingo", "bokeh", "ratio", "late",
+    "reshade", "mods", "shot", "divorce", "crash", "retire", "late", "ratio", "drunk", "rick", "wordle",
+    "ign", "uuu", "lore", "moykeh"
+]
+
+emojiLetters = "🇦🇧🇨🇩🇪🇫🇬🇭🇮🇯🇰🇱🇲🇳🇴🇵🇶🇷🇸🇹🇺🇻🇼🇽🇾🇿"
+letters = "abcdefghijklmnopqrstuvwxyz"
