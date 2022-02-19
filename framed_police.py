@@ -6,6 +6,7 @@ import datetime
 
 from vars import *
 from functions import *
+from wordle import *
 
 # pip install -U git+https://github.com/Rapptz/discord.py
 
@@ -413,6 +414,12 @@ async def mario(ctx, *args):
 #             await asyncio.sleep(1)
 #             await message.edit(content=frame)
 
+@bot.command(name='framedle')
+@commands.cooldown(1, 60, commands.BucketType.guild)
+async def framedle(ctx, *args):
+    framedleView = PlayFramedle()
+    await ctx.send("Play Framedle", view=framedleView)
+
 @bot.command(name='help')
 async def help(ctx, *args):
     e = discord.Embed(title="List of commands",
@@ -442,6 +449,7 @@ async def help(ctx, *args):
             e.add_field(name=helpMsg['changeBingo']['name'], value=helpMsg['changeBingo']['description'], inline=False)
     e.add_field(name=helpMsg['bingo']['name'], value=helpMsg['bingo']['description'], inline=False)
     e.add_field(name=helpMsg['connect']['name'], value=helpMsg['connect']['description'], inline=False)
+    e.add_field(name=helpMsg['framedle']['name'], value=helpMsg['framedle']['description'], inline=False)
     e.add_field(name=helpMsg['special']['name'], value=helpMsg['special']['description'], inline=False)
     # e.set_image(url="https://cdn.discordapp.com/emojis/575642684006334464.png?size=40")
     e.set_footer(text="Made by Fraulk", icon_url="https://cdn.discordapp.com/avatars/192300712049246208/0663e3577e2759aa2ee0b75a4ec8f0cc.webp?size=128")
