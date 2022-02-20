@@ -11,8 +11,12 @@ class PlayFramedle(View):
         super().__init__(timeout=timeout)
         # self.chanId = ctx.channel.id
         
-    @discord.ui.button(label='Play', style=discord.ButtonStyle.blurple)
-    async def playBtn(self, button: discord.ui.Button, interaction: discord.Interaction):
+    @discord.ui.button(label='Play Solo', style=discord.ButtonStyle.blurple)
+    async def playSoloBtn(self, button: discord.ui.Button, interaction: discord.Interaction):
+        await interaction.response.send_message(content="Choose a letter", view=Framedle(), ephemeral=True)
+
+    @discord.ui.button(label='Play Multi', style=discord.ButtonStyle.blurple)
+    async def playMultiBtn(self, button: discord.ui.Button, interaction: discord.Interaction):
         # try:
         #     padawan = interaction.user.guild.get_role(PadawanRole)
         # except AttributeError:
