@@ -11,7 +11,7 @@ async def getHofShot(ctx):
     resJson = json.loads(response.content)
     # print(resJson["_default"][str(random.randint(1, len(resJson["_default"])))])
     while True:
-        print("etset")
+        print("loop")
         try:
             shot = resJson["_default"][str(random.randint(1, len(resJson["_default"])))]
         except KeyError:

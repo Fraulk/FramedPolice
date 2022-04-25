@@ -430,6 +430,7 @@ async def gvp(ctx):
     if isGVPRunning:
         await ctx.send(f"An instance of the game is already running here : <#{guessVpThread.id}>")
         return
+    isGVPRunning = True
     GVPChannel = ctx.channel
     currentShot = await getHofShot(ctx)
     print(currentShot['author'])
@@ -439,7 +440,6 @@ async def gvp(ctx):
     e.set_image(url=currentShot['thumbnailUrl'])
     message = await ctx.send(embed=e)
     guessVpThread = await message.create_thread(name="Guess the VP!", auto_archive_duration=60)
-    isGVPRunning = True
 
 @bot.event
 async def on_guess_vp_winner(vp, winner):
