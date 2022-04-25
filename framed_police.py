@@ -7,6 +7,7 @@ import datetime
 from vars import *
 from functions import *
 from wordle import *
+from guess_the_vp import *
 
 # pip install -U git+https://github.com/Rapptz/discord.py
 
@@ -35,6 +36,8 @@ async def on_message(message):
     elif message.content.lower() == "horny bot":
         await message.add_reaction(random.choice(hornyReaction))
         await react(message, "horny", bot.user.avatar)
+    elif isGVPRunning and message.channel.id == guessVpThread.id:
+        await checkGVPWinner(message, currentShot['author'])
     else:
         return
 
@@ -417,6 +420,41 @@ async def mario(ctx, *args):
 async def framedle(ctx, *args):
     framedleView = PlayFramedle()
     await ctx.send("Play Framedle", view=framedleView)
+
+guessVpThread = None
+isGVPRunning = False
+currentShot = None
+GVPChannel = None
+@bot.command(name='guessVp')
+async def guessVp(ctx):
+    global isGVPRunning
+    global guessVpThread
+    global currentShot
+    global GVPChannel
+    if isGVPRunning: return
+    GVPChannel = ctx.channel
+    currentShot = await getHofShot()
+    e = discord.Embed(title="Guess the VP !",
+                      description="Who's that ~~pokemon~~ VP !?",
+                      color=colorNames[currentShot['colorName']])
+    e.set_image(url=currentShot['thumbnailUrl'])
+    message = await ctx.send(embed=e)
+    guessVpThread = await message.create_thread(name="Guess the VP!", auto_archive_duration=60)
+    isGVPRunning = True
+
+@bot.event
+async def guess_vp_winner(vp, winner):
+    global guessVpThread
+    global isGVPRunning
+    isGVPRunning = False
+    guessVpThread.delete()
+
+    await GVPChannel.send(f"<@{winner.id}> found the vp! It was {vp.display_name} ({vp.name})")
+
+@bot.event
+async def on_thread_delete():
+    # on_thread_remove (archive)?
+    pass
 
 @bot.command(name='help')
 async def help(ctx, *args):
