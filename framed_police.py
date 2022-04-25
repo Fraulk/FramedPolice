@@ -316,10 +316,10 @@ async def changeBingo(ctx):
 
 @bot.event
 async def on_bingo_winner(user, channelId):
-    resetBingoBoard()
-    saveBingo()
     lastBingo = Image.open('./tempBingo.png')
     lastBingo.save('./lastBingo.png')
+    resetBingoBoard()
+    saveBingo()
     channel = bot.get_channel(channelId)
     await channel.send("The bingo has been completed !", file=discord.File('./lastBingo.png'))
 
