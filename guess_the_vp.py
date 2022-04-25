@@ -18,5 +18,5 @@ async def getHofShot():
 async def checkGVPWinner(msg, authorId):
     member = discord.utils.find(lambda m: m.name.lower() == msg.content.lower() or m.display_name.lower() == msg.content.lower(), msg.guild.members)
     if member != None and member.id == int(authorId):
-        print(member + " found the VP!")
         bot.dispatch("guess_vp_winner", member, msg.author)
+        print(msg.author.name + " found the VP, " + member.name)
