@@ -1,12 +1,13 @@
 import os
 import time
 import random
-# import asyncio
+import asyncio
 import datetime
 
 from vars import *
 from functions import *
 from wordle import *
+from guess_the_vp import *
 
 # pip install -U git+https://github.com/Rapptz/discord.py
 
@@ -37,6 +38,8 @@ async def on_message(message):
         await react(message, "horny", bot.user.avatar)
     elif "https://framedsc.com/HallOfFramed/?" in message.content:
         await loadImagesFromHOF(message.content, message.channel)
+    elif isGVPRunning and message.channel.id == guessVpThread.id:
+        await checkGVPWinner(message, currentShot['author'])
     else:
         return
 
@@ -221,8 +224,8 @@ async def uuu(ctx, *args):
         data, gameNames = await getUUU(args)
         if len(data) == 0: data = random.choice(notFound).format(' '.join(args))
         e = discord.Embed(title="FRAMED. Screenshot Community",
-                          url="https://framedsc.github.io/index.htm",
-                          description="© 2019-2021 FRAMED. All rights reserved. ",
+                          url="https://framedsc.com/",
+                          description="© 2019-2022 FRAMED. All rights reserved. ",
                           color=0x9a9a9a)
         e.set_thumbnail(url="https://cdn.discordapp.com/emojis/575642684006334464.png?size=128")
         data = await over2000(data, gameNames, args)
@@ -234,8 +237,8 @@ async def guide(ctx, *args):
         data, gameNames = await getGuides(args)
         if len(data) == 0: data = random.choice(notFound).format(' '.join(args))
         e = discord.Embed(title="FRAMED. Screenshot Community",
-                          url="https://framedsc.github.io/index.htm",
-                          description="© 2019-2021 FRAMED. All rights reserved. ",
+                          url="https://framedsc.com/",
+                          description="© 2019-2022 FRAMED. All rights reserved. ",
                           color=0x9a9a9a)
         e.set_thumbnail(url="https://cdn.discordapp.com/emojis/575642684006334464.png?size=128")
         data = await over2000(data, gameNames, args)
@@ -247,8 +250,8 @@ async def cheat(ctx, *args):
         data, gameNames = await getCheats(args)
         if len(data) == 0: data = random.choice(notFound).format(' '.join(args))
         e = discord.Embed(title="FRAMED. Screenshot Community",
-                          url="https://framedsc.github.io/index.htm",
-                          description="© 2019-2021 FRAMED. All rights reserved. ",
+                          url="https://framedsc.com/",
+                          description="© 2019-2022 FRAMED. All rights reserved. ",
                           color=0x9a9a9a)
         e.set_thumbnail(url="https://cdn.discordapp.com/emojis/575642684006334464.png?size=128")
         data = await over2000(data, gameNames, args)
@@ -274,8 +277,8 @@ async def tool(ctx, *args):
         if random.randint(0, 9) <= 1:
             data += "\n**╘** : <https://discord.com/channels/549986543650078722/549986543650078725/893340504719249429>"
         e = discord.Embed(title="FRAMED. Screenshot Community",
-                          url="https://framedsc.github.io/index.htm",
-                          description="© 2019-2021 FRAMED. All rights reserved. ",
+                          url="https://framedsc.com/",
+                          description="© 2019-2022 FRAMED. All rights reserved. ",
                           color=0x9a9a9a)
         e.set_thumbnail(url="https://cdn.discordapp.com/emojis/575642684006334464.png?size=128")
         data = await over2000(data, camGameNames + uuuGameNames + guideGameNames + cheatGameNames, args)
@@ -318,10 +321,10 @@ async def changeBingo(ctx):
 
 @bot.event
 async def on_bingo_winner(user, channelId):
-    resetBingoBoard()
-    saveBingo()
     lastBingo = Image.open('./tempBingo.png')
     lastBingo.save('./lastBingo.png')
+    resetBingoBoard()
+    saveBingo()
     channel = bot.get_channel(channelId)
     await channel.send("The bingo has been completed !", file=discord.File('./lastBingo.png'))
 
@@ -395,30 +398,81 @@ async def connect(ctx, arg, arg2 = None):
     # Wait for the View to stop listening for input...
     await view.wait()
 
-@bot.command(name='golf')
-async def golf(ctx, *args):
-    content = golfEmoji
-    await ctx.send(content)
-
 @bot.command(name='mario')
 async def mario(ctx, *args):
     content = marioEmoji
     await ctx.send(content)
 
-# @bot.command(name='shocked')
-# async def shocked(ctx, *args):
-#     content = shockedFrames['shocked0']
-#     message = await ctx.send(content)
-#     for i in range(20):
-#         for key, frame in shockedFrames.items():
-#             await asyncio.sleep(1)
-#             await message.edit(content=frame)
+@bot.command(name='golf')
+async def shocked(ctx, *args):
+    content = golfFrames[0]
+    message = await ctx.send(content)
+    for frame in range(1, len(golfFrames)):
+        await asyncio.sleep(1)
+        await message.edit(content=golfFrames[frame])
 
 @bot.command(name='framedle')
 @commands.cooldown(1, 60, commands.BucketType.guild)
 async def framedle(ctx, *args):
     framedleView = PlayFramedle()
     await ctx.send("Play Framedle", view=framedleView)
+
+guessVpThread = None
+isGVPRunning = False
+currentShot = None
+GVPChannel = None
+@bot.command(name='gvp')
+async def gvp(ctx):
+    global isGVPRunning
+    global guessVpThread
+    global currentShot
+    global GVPChannel
+    if isGVPRunning:
+        await ctx.send(f"An instance of the game is already running here : <#{guessVpThread.id}>")
+        return
+    GVPChannel = ctx.channel
+    currentShot = await getHofShot()
+    print(currentShot['author'])
+    e = discord.Embed(title="Guess the VP !",
+                      description="Who's that ~~pokemon~~ VP !?",
+                      color=colorNames[currentShot['colorName']])
+    e.set_image(url=currentShot['thumbnailUrl'])
+    message = await ctx.send(embed=e)
+    guessVpThread = await message.create_thread(name="Guess the VP!", auto_archive_duration=60)
+    isGVPRunning = True
+
+@bot.event
+async def on_guess_vp_winner(vp, winner):
+    global guessVpThread
+    global isGVPRunning
+    isGVPRunning = False
+    await guessVpThread.delete()
+    guessVpThread = None
+    await GVPChannel.send(f"<@{winner.id}> found the vp! It was {vp.display_name} ({vp.name})")
+
+@bot.event
+async def on_thread_delete(thread):
+    global guessVpThread
+    if thread.id == guessVpThread.id:
+        global isGVPRunning
+        isGVPRunning = False
+        guessVpThread = None
+@bot.event
+async def on_thread_remove(thread):
+    global guessVpThread
+    if thread.id == guessVpThread.id:
+        await guessVpThread.delete()
+        global isGVPRunning
+        isGVPRunning = False
+        guessVpThread = None
+
+@commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
+@bot.command(name='resetGVP')
+async def resetGVP(ctx):
+    global isGVPRunning
+    isGVPRunning = False
+    if guessVpThread != None:
+        await guessVpThread.delete()
 
 @bot.command(name='help')
 async def help(ctx, *args):
@@ -463,15 +517,12 @@ async def help(ctx, *args):
 # https://stackoverflow.com/questions/65765951/discord-python-counting-messages-from-a-week-and-save-them
 # FIXME : "older shot" triggered false positive, f
 # TODO : i should limit the character to 3 min in cam and uuu commands
-# TODO : create a !cheat commands that gets cheat table from framed site
 # TODO : put things in embeds : https://leovoel.github.io/embed-visualizer/
 # FIXME : catch commands used without arguments
-# FIXME : remove spaces from links, test with cyberpunk, bal
-# FIXME : !tools la throws index out of range
-# FIXME : !tools halo throws error
 # TODO : make the bot detect birthday on message
 # TODO : i should adapt the code for tiny pfp
 # TODO : when !connect without mention, let every one to be the opponent
 # TODO : Would actually help if we had an automated system of sorts, maybe adding a specific reaction on images you think are nice, and then the bot posts your link in the second look channel after a couple of days
+# TODO : can the Bot be setup so it DM´s or pings you when a Picture of you got voted into HoF?
 
 bot.run(API_KEY)
