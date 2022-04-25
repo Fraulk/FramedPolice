@@ -431,7 +431,7 @@ async def gvp(ctx):
         await ctx.send(f"An instance of the game is already running here : <#{guessVpThread.id}>")
         return
     GVPChannel = ctx.channel
-    currentShot = await getHofShot()
+    currentShot = await getHofShot(ctx)
     print(currentShot['author'])
     e = discord.Embed(title="Guess the VP !",
                       description="Who's that ~~pokemon~~ VP !?",
