@@ -262,6 +262,14 @@ helpMsg = {
         'name': '!framedle',
         'description': 'Play the framed wordle! The rules differ a little bit from the wordle'
     },
+    'gvp': {
+        'name': '!gvp',
+        'description': 'Guess the VP! Answer in created threads'
+    },
+    'resetGVP': {
+        'name': '!resetGVP',
+        'description': 'Reset the Guess the VP game, when the command doesn\'t work or nobody finds the vp'
+    },
     'special': {
         'name': 'Special reaction',
         'description': 'The bot has special reaction for some query : "good|bad|horny bot"'
