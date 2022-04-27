@@ -38,7 +38,7 @@ async def on_message(message):
         await react(message, "horny", bot.user.avatar)
     elif "https://framedsc.com/HallOfFramed/?" in message.content:
         await loadImagesFromHOF(message.content, message.channel)
-    elif isGVPRunning and message.channel.id == guessVpThread.id:
+    elif isGVPRunning and guessVpThread != None and message.channel.id == guessVpThread.id:
         await checkGVPWinner(message, currentShot['author'])
     else:
         return
@@ -433,6 +433,10 @@ async def gvp(ctx):
     isGVPRunning = True
     GVPChannel = ctx.channel
     currentShot = await getHofShot(ctx)
+    print(currentShot)
+    if type(currentShot) is not dict or type(currentShot['author']) is not str or type(currentShot['colorName']) is not str or type(currentShot['thumbnailUrl']) is not str:
+        print("gvp error")
+        isGVPRunning = False
     print(currentShot['author'])
     e = discord.Embed(title="Guess the VP !",
                       description="Who's that ~~pokemon~~ VP !?",
@@ -453,14 +457,15 @@ async def on_guess_vp_winner(vp, winner):
 @bot.event
 async def on_thread_delete(thread):
     global guessVpThread
-    if thread.id == guessVpThread.id:
+    if guessVpThread.id != None and thread.id == guessVpThread.id:
         global isGVPRunning
         isGVPRunning = False
         guessVpThread = None
+
 @bot.event
 async def on_thread_remove(thread):
     global guessVpThread
-    if thread.id == guessVpThread.id:
+    if guessVpThread.id != None and thread.id == guessVpThread.id:
         await guessVpThread.delete()
         global isGVPRunning
         isGVPRunning = False
