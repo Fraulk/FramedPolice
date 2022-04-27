@@ -15,7 +15,9 @@ async def getHofShot(ctx):
         try:
             shot = resJson["_default"][str(random.randint(1, len(resJson["_default"])))]
         except:
-            break
+            continue
+        if shot['author'] == "158655628531859456":
+            continue
         member = discord.utils.find(lambda m: m.id == int(shot['author']) or m.id == int(shot['author']), ctx.guild.members)
         if member != None:
             break
