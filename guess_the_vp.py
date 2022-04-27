@@ -14,7 +14,7 @@ async def getHofShot(ctx):
         print("loop")
         try:
             shot = resJson["_default"][str(random.randint(1, len(resJson["_default"])))]
-        except KeyError:
+        except:
             break
         member = discord.utils.find(lambda m: m.id == int(shot['author']) or m.id == int(shot['author']), ctx.guild.members)
         if member != None:
