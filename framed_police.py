@@ -452,12 +452,13 @@ async def on_guess_vp_winner(vp, winner):
     isGVPRunning = False
     await guessVpThread.delete()
     guessVpThread = None
-    await GVPChannel.send(f"<@{winner.id}> found the vp! It was {vp.display_name} ({vp.name})")
+    gamename = currentShot['gameName'] if currentShot != None else "unknown"
+    await GVPChannel.send(f"<@{winner.id}> found the vp! It was {vp.display_name} ({vp.name}) on the game: {gamename}")
 
 @bot.event
 async def on_thread_delete(thread):
     global guessVpThread
-    if guessVpThread.id != None and thread.id == guessVpThread.id:
+    if guessVpThread != None and thread.id == guessVpThread.id:
         global isGVPRunning
         isGVPRunning = False
         guessVpThread = None
@@ -465,7 +466,7 @@ async def on_thread_delete(thread):
 @bot.event
 async def on_thread_remove(thread):
     global guessVpThread
-    if guessVpThread.id != None and thread.id == guessVpThread.id:
+    if guessVpThread != None and thread.id == guessVpThread.id:
         await guessVpThread.delete()
         global isGVPRunning
         isGVPRunning = False
