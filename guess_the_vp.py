@@ -6,7 +6,7 @@ import random
 from vars import *
 
 lastShots = []
-blacklist = ["158655628531859456"]
+blacklist = ["158655628531859456", "411108650720034817"]
 bufferSize = 20
 async def getHofShot(ctx):
     response = requests.get("https://raw.githubusercontent.com/originalnicodrgitbot/hall-of-framed-db/main/shotsdb.json", allow_redirects=True)
