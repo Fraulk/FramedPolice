@@ -532,5 +532,6 @@ async def help(ctx, *args):
 # TODO : when !connect without mention, let every one to be the opponent
 # TODO : Would actually help if we had an automated system of sorts, maybe adding a specific reaction on images you think are nice, and then the bot posts your link in the second look channel after a couple of days
 # TODO : can the Bot be setup so it DM´s or pings you when a Picture of you got voted into HoF?
+# TODO : make the bot detects on_reaction for sys and make a list of shots near the hof to print them in second look
 
 bot.run(API_KEY)

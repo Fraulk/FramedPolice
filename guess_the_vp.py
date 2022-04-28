@@ -35,7 +35,7 @@ message_count = 0
 async def checkGVPWinner(msg, authorId):
     global message_count
     message_count += 1
-    member = discord.utils.find(lambda m: m.name.lower() == msg.content.lower() or m.display_name.lower() == msg.content.lower(), msg.guild.members)
+    member = discord.utils.find(lambda m: compareNames(m, msg.content), msg.guild.members)
     if message_count == 30:
         memberHint = discord.utils.find(lambda m: m.id == int(authorId), msg.guild.members)
         await msg.channel.send(f"Hint: {memberHint.name[:1]}")
@@ -46,3 +46,8 @@ async def checkGVPWinner(msg, authorId):
         message_count = 0
         bot.dispatch("guess_vp_winner", member, msg.author)
         print(msg.author.name + " found the VP, " + member.name)
+
+specialNames = {"Romаn": "Roman", "MAXPΞR": "MAXPER", "Catuṣkoṭi": "Catuskoti", "bohdan🇺🇦": "bohdan"}
+def compareNames(member, msgContent):
+    if member.name in specialNames.keys() and msgContent.lower() == specialNames[member.name].lower(): return True
+    return member.name.lower() == msgContent.lower() or member.display_name.lower() == msgContent.lower()
