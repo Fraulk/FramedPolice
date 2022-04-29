@@ -47,7 +47,7 @@ async def checkGVPWinner(msg, authorId):
         bot.dispatch("guess_vp_winner", member, msg.author)
         print(msg.author.name + " found the VP, " + member.name)
 
-specialNames = {"Romаn": "Roman", "MAXPΞR": "MAXPER", "Catuṣkoṭi": "Catuskoti", "bohdan🇺🇦": "bohdan"}
+specialNames = {"Romаn": "Roman", "MAXPΞR": "MAXPER", "Catuṣkoṭi": "Catuskoti", "bohdan🇺🇦": "bohdan", "Loyd✦": "Loyd"}
 def compareNames(member, msgContent):
     if member.name in specialNames.keys() and msgContent.lower() == specialNames[member.name].lower(): return True
     return member.name.lower() == msgContent.lower() or member.display_name.lower() == msgContent.lower()
