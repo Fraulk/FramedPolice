@@ -157,18 +157,21 @@ async def getGuides(args):
     args = args.replace("'", "\\'")
     responseAL = requests.get('https://framedsc.github.io/A-L.htm')
     responseMZ = requests.get('https://framedsc.github.io/M-Z.htm')
+    consoleGuide = requests.get('https://framedsc.com/Consoleguides.htm')
     responseGeneralGuides = requests.get('https://framedsc.github.io/GeneralGuides/index.htm')
     responseGeneralGuidesAdv = requests.get('https://framedsc.github.io/GeneralGuidesAdvanced.htm')
     responseReshadeGuides = requests.get('https://framedsc.github.io/ReshadeGuides/index.htm')
     responseReshadeShaderGuides = requests.get('https://framedsc.github.io/ReshadeGuidesShaderguides.htm')
     assert responseAL.status_code == 200, 'Wrong status code'
     assert responseMZ.status_code == 200, 'Wrong status code'
+    assert consoleGuide.status_code == 200, 'Wrong status code'
     assert responseGeneralGuides.status_code == 200, 'Wrong status code'
     assert responseGeneralGuidesAdv.status_code == 200, 'Wrong status code'
     assert responseReshadeGuides.status_code == 200, 'Wrong status code'
     assert responseReshadeShaderGuides.status_code == 200, 'Wrong status code'
     responses = str(responseAL.content)
     responses += str(responseMZ.content)
+    responses += str(consoleGuide.content)
     responses += str(responseGeneralGuides.content)
     responses += str(responseGeneralGuidesAdv.content)
     responses += str(responseReshadeGuides.content)
