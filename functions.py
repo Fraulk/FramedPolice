@@ -221,7 +221,7 @@ async def getCheats(args):
 async def secondLook(message):
     userDict = {}
     links = re.findall("(https:\/\/discord.com\/channels\/.*\/.*\d)(?:| )", message.content)
-    if len(links) == 0: return
+    if len(links) < 3: return
     print("---------------------------------------- Building second-look message for " + message.author.name + "#" + message.author.discriminator)
     async with message.channel.typing():
         for link in links:
