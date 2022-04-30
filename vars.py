@@ -275,7 +275,7 @@ helpMsg = {
         'description': 'The bot has special reaction for some query : "good|bad|horny bot"'
     },
     'getScore': {
-        'name': '!getScore',
+        'name': '!getScore [ids]',
         'description': 'Get the count of reaction from unique users of a shot'
     },
 }
