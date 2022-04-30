@@ -635,6 +635,17 @@ def toDiscordString(board: list, cursor: int, userId: int, player: int, customEm
     if hasWon: formattedBoard += f"\nReplay : https://connect4-replay.netlify.app/?data={'-'.join(map(str, replay))}"
     return formattedBoard
 
+# thanks nico
+async def getShotReactions(message) -> int:
+    users = []
+    if len(message.reactions) == 0:
+        return 0
+    for reaction in message.reactions:
+        async for user in reaction.users():
+            users.append(user)
+    users = list(filter(lambda u: u.id != message.author.id, dict.fromkeys(users)))
+    return len(users)
+
 if os.path.isfile('./messages.pkl'):
     with open('messages.pkl', 'rb') as f:
         usersMessages = pickle.load(f)

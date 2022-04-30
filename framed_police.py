@@ -480,8 +480,22 @@ async def resetGVP(ctx):
     if guessVpThread != None:
         await guessVpThread.delete()
 
+@commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
+@bot.command(name='getScore')
+async def getScore(ctx, *args):
+    if len(args) == 0:
+        await ctx.send("No ID specified")
+        return
+    async with ctx.typing():
+        channel = bot.get_channel(SYSChannel)
+        if len(args) == 1:
+            await ctx.send(await getShotReactions(await channel.fetch_message(args[0])))
+        elif len(args) > 1:
+            reactList = [await getShotReactions(await channel.fetch_message(r)) for r in args]
+            await ctx.send(reactList)
+
 @bot.command(name='help')
-async def help(ctx, *args):
+async def help(ctx):
     e = discord.Embed(title="List of commands",
                       url="https://github.com/Fraulk/FramedPolice",
                       description="",
@@ -498,6 +512,7 @@ async def help(ctx, *args):
         mods = discord.utils.get(ctx.guild.roles, id=549988228737007638)
         testFoudersEd = discord.utils.get(ctx.guild.roles, id=874375168204611604)
         if FoudersEd in ctx.author.roles or mods in ctx.author.roles or testFoudersEd in ctx.author.roles:
+            e.add_field(name=helpMsg['getScore']['name'], value=helpMsg['getScore']['description'], inline=False)
             e.add_field(name=helpMsg['changeDelay']['name'], value=helpMsg['changeDelay']['description'], inline=False)
             e.add_field(name=helpMsg['changeLimit']['name'], value=helpMsg['changeLimit']['description'], inline=False)
             e.add_field(name=helpMsg['currentValue']['name'], value=helpMsg['currentValue']['description'], inline=False)
