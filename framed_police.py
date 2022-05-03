@@ -472,6 +472,15 @@ async def on_thread_remove(thread):
         isGVPRunning = False
         guessVpThread = None
 
+@bot.event
+async def on_thread_update(before, after):
+    global guessVpThread
+    if guessVpThread != None and after.id == guessVpThread.id and after.archived:
+        await guessVpThread.delete()
+        global isGVPRunning
+        isGVPRunning = False
+        guessVpThread = None
+
 @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
 @bot.command(name='resetGVP')
 async def resetGVP(ctx):
