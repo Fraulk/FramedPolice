@@ -36,10 +36,10 @@ async def checkGVPWinner(msg, authorId):
     global message_count
     message_count += 1
     member = discord.utils.find(lambda m: compareNames(m, msg.content), msg.guild.members)
-    if message_count == 30:
+    if message_count == 20:
         memberHint = discord.utils.find(lambda m: m.id == int(authorId), msg.guild.members)
         await msg.channel.send(f"Hint: {memberHint.name[:1]}")
-    if message_count == 45:
+    if message_count == 35:
         memberHint = discord.utils.find(lambda m: m.id == int(authorId), msg.guild.members)
         await msg.channel.send(f"Hint: {memberHint.name[:2]}")
     if member != None and member.id == int(authorId):
