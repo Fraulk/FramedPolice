@@ -16,6 +16,12 @@ from vars import *
 
 # bot = commands.Bot(command_prefix='')
 
+# 86400 : 24h
+# 43200 : 12h
+# Test channel : 873627093840314401
+# Framed channel : 549986930071175169
+DELAY = 43200
+LIMIT = 5
 usersMessages = []
 
 class UserMessage:
@@ -86,6 +92,43 @@ def saveBingo():
 def saveTitleAlts():
     with open('titleAlts.pkl', 'wb') as f:
         pickle.dump(titleAlts, f)
+
+def changeCurrentLimit(ctx, arg):
+    print(f"'changeLimit' command has been used by {ctx.author.name}#{ctx.author.discriminator}")
+    global LIMIT
+    LIMIT = int(arg)
+    print("Limit has been changed to", arg)
+
+def changeCurrentDelay(ctx, arg):
+    print(f"'changeDelay' command has been used by {ctx.author.name}#{ctx.author.discriminator}")
+    global DELAY
+    DELAY = int(arg)
+    print("Delay has been changed to", arg)
+
+def getCurrentValue(): return (LIMIT, DELAY)
+
+async def resetUser(arg):
+    curUser = ""
+    response = ""
+    global usersMessages
+    for msg in usersMessages:
+        if msg.id == int(arg):
+            msg.count = 0
+            msg.reachedLimit = False
+            curUser = msg.name
+    if curUser == "":
+        response = "This user either don't exists or didn't posted anything yet"
+    else:
+        response = f"{curUser} has been reset"
+        await save()
+    return response
+
+async def resetAllUsers():
+    global usersMessages
+    for msg in usersMessages:
+        msg.count = 0
+        msg.reachedLimit = False
+    await save()
 
 async def getCams(args):
     response = requests.get('https://docs.google.com/spreadsheet/ccc?key=1lnM2SM_RBzqile870zG70E39wuuseqQE0AaPW-P1p5E&output=csv')

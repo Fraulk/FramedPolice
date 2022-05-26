@@ -92,26 +92,21 @@ async def on_member_remove(member):
 @bot.command(name='changeDelay', help='Change the delay after reaching the limit for posting shots, with number of seconds')
 @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
 async def changeDelay(ctx, arg):
-    print(f"'changeDelay' command has been used by {ctx.author.name}#{ctx.author.discriminator}")
-    global DELAY
-    DELAY = int(arg)
-    print("Delay has been changed to", arg)
+    changeCurrentDelay(ctx, arg)
     await ctx.send(f"Delay has been changed to {arg}")
 
 @bot.command(name='changeLimit', help='Change the limit for posting shots')
 @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
 async def changeLimit(ctx, arg):
-    print(f"'changeLimit' command has been used by {ctx.author.name}#{ctx.author.discriminator}")
-    global LIMIT
-    LIMIT = int(arg)
-    print("Limit has been changed to", arg)
+    changeCurrentLimit(ctx, arg)
     await ctx.send(f"Limit has been changed to {arg}")
 
 @bot.command(name='currentValue', help='Shows the current values for DELAY and LIMIT')
 @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
 async def currentValue(ctx):
     print(f"'currentValue' command has been used by {ctx.author.name}#{ctx.author.discriminator}")
-    await ctx.send(f"LIMIT = {LIMIT}\nDELAY = {DELAY}")
+    limit, delay = getCurrentValue()
+    await ctx.send(f"LIMIT = {limit}\nDELAY = {delay}")
 
 @bot.command(name='dumpR', help='Shows data about those who reached the limit and have been dm\'d by the bot')
 @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
@@ -169,30 +164,14 @@ async def check(ctx):
 @bot.command(name='reset', help='Resets the count for a person, with his ID as parameter')
 @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
 async def reset(ctx, arg):
-    curUser = ""
-    response = ""
-    global usersMessages
-    for msg in usersMessages:
-        if msg.id == int(arg):
-            msg.count = 0
-            msg.reachedLimit = False
-            curUser = msg.name
-    if curUser == "":
-        response = "This user either don't exists or didn't posted anything yet"
-    else:
-        response = f"{curUser} has been reset"
-        await save()
+    response = await resetUser(arg)
     print(f"'reset' command has been used by {ctx.author.name}#{ctx.author.discriminator}")
     await ctx.send(response)
 
 @bot.command(name='resetAll', help='Resets the count for everyone')
 @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
 async def resetAll(ctx):
-    global usersMessages
-    for msg in usersMessages:
-        msg.count = 0
-        msg.reachedLimit = False
-    await save()
+    await resetAllUsers()
     print(f"'resetAll' command has been used by {ctx.author.name}#{ctx.author.discriminator}")
     await ctx.send("Everyone has been reset")
 

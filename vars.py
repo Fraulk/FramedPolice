@@ -7,12 +7,6 @@ from discord.ext import commands
 from firebase_admin import credentials
 
 PROD = True
-# 86400 : 24h
-# 43200 : 12h
-# Test channel : 873627093840314401
-# Framed channel : 549986930071175169
-DELAY = 43200
-LIMIT = 5
 WelcomeRole = 873297069715099721 if PROD else 898969812254990367
 PadawanRole = 872825204869582869 if PROD else 899266723906220042
 JoinedChannel = 873242046675169310 if PROD else 874368324023255131
