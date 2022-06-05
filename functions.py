@@ -205,6 +205,7 @@ async def getGuides(args):
     responseGeneralGuidesAdv = requests.get('https://framedsc.github.io/GeneralGuidesAdvanced.htm')
     responseReshadeGuides = requests.get('https://framedsc.github.io/ReshadeGuides/index.htm')
     responseReshadeShaderGuides = requests.get('https://framedsc.github.io/ReshadeGuidesShaderguides.htm')
+    responseReshadeAddonsGuides = requests.get('https://framedsc.com/ReshadeGuidesAddonguides.htm')
     assert responseAL.status_code == 200, 'Wrong status code'
     assert responseMZ.status_code == 200, 'Wrong status code'
     assert consoleGuide.status_code == 200, 'Wrong status code'
@@ -212,6 +213,7 @@ async def getGuides(args):
     assert responseGeneralGuidesAdv.status_code == 200, 'Wrong status code'
     assert responseReshadeGuides.status_code == 200, 'Wrong status code'
     assert responseReshadeShaderGuides.status_code == 200, 'Wrong status code'
+    assert responseReshadeAddonsGuides.status_code == 200, 'Wrong status code'
     responses = str(responseAL.content)
     responses += str(responseMZ.content)
     responses += str(consoleGuide.content)
@@ -219,6 +221,7 @@ async def getGuides(args):
     responses += str(responseGeneralGuidesAdv.content)
     responses += str(responseReshadeGuides.content)
     responses += str(responseReshadeShaderGuides.content)
+    responses += str(responseReshadeAddonsGuides.content)
     normalizedList = re.sub(r'\\t|\\n|\\r', '\n', responses)
     guidesRegex = r'"><a href="(GameGuides\/.*\.htm|..\/ReshadeGuides\/.*\.htm|..\/GeneralGuides\/.*\.htm|ReshadeGuides\/Shaders\/.*\.htm)">(.*)<\/a>'
     guides = re.finditer(guidesRegex, normalizedList, flags=re.M)
