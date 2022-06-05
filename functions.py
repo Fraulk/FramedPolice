@@ -223,7 +223,7 @@ async def getGuides(args):
     responses += str(responseReshadeShaderGuides.content)
     responses += str(responseReshadeAddonsGuides.content)
     normalizedList = re.sub(r'\\t|\\n|\\r', '\n', responses)
-    guidesRegex = r'"><a href="(GameGuides\/.*\.htm|..\/ReshadeGuides\/.*\.htm|..\/GeneralGuides\/.*\.htm|ReshadeGuides\/Shaders\/.*\.htm)">(.*)<\/a>'
+    guidesRegex = r'"><a href="(GameGuides\/.*\.htm|..\/ReshadeGuides\/.*\.htm|..\/GeneralGuides\/.*\.htm|ReshadeGuides\/Shaders\/.*\.htm|ReshadeGuides\/Addons\/.*\.htm)">(.*)<\/a>'
     guides = re.finditer(guidesRegex, normalizedList, flags=re.M)
     guideLinks = []
     guideNames = []
