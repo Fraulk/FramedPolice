@@ -51,6 +51,7 @@ async def checkMessage(message):
     if len(attachmentCount) > 1:
         await DMChannel.send(f"Please post your shots one by one.")
         await message.delete()
+        return
     if len(attachmentCount) == 0 and len(embeds) == 0:
         print('ignored')
         return
