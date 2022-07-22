@@ -106,6 +106,8 @@ async def on_member_remove(member):
 async def on_error(ctx, error):
     if isinstance(error, discord.ext.commands.errors.MissingAnyRole):
         await ctx.send(f"Sorry but you can't use that command <@{ctx.author.id}>")
+    if isinstance(error, discord.app_commands.errors.MissingRole):
+        await ctx.send(f"Sorry but you can't use that command <@{ctx.author.id}>")
 
 @bot.hybrid_command(name='change_delay', help='Change the delay after reaching the limit for posting shots, with number of seconds')
 @app_commands.rename(arg='delay')

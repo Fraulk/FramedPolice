@@ -8,7 +8,7 @@ from functions import *
 
 @bot.tree.command(name='reset', description="Resets the count for a person, with his his @name as a parameter")
 @app_commands.describe(member='The member you want to reset')
-@commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
+@app_commands.checks.has_role([549988038516670506, 549988228737007638, 874375168204611604])
 async def resetAC(interaction: discord.Interaction, member: discord.Member):
     if member is None:
         await interaction.response.send_message("Please provide the name of the user")
@@ -85,7 +85,7 @@ async def bingoAC(interaction: discord.Interaction):
     bingoView = EphemeralBingo(interaction.channel.id)
     await interaction.response.send_message("", view=bingoView, file=discord.File('tempBingo.png'), ephemeral=True)
 
-@commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
+@app_commands.checks.has_role([549988038516670506, 549988228737007638, 874375168204611604])
 @bot.tree.command(name="change_bingo", description="Change the bingo image (change takes effect at the next round)")
 async def changeBingo(interaction: discord.Interaction, file: discord.Attachment):
     if file.url[-3:] == "png":
