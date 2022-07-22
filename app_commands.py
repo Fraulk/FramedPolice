@@ -133,7 +133,7 @@ async def report_message(interaction: discord.Interaction, message: discord.Mess
     )
 
     # Handle report by sending it into a log channel
-    log_channel = interaction.guild.get_channel(875500856232013854)  # replace with your channel id
+    log_channel = interaction.guild.get_channel(ReportChannel)  # replace with your channel id
 
     embed = discord.Embed(title='Reported Message')
     if message.content:
