@@ -5,6 +5,7 @@ import pickle
 import random
 import discord
 import datetime
+import shutil
 from discord.ext import commands
 from discord.ext.commands import Bot
 import requests
@@ -20,7 +21,7 @@ from vars import *
 # 43200 : 12h
 # Test channel : 873627093840314401
 # Framed channel : 549986930071175169
-DELAY = 43200
+DELAY = 7200
 LIMIT = 5
 usersMessages = []
 
@@ -33,6 +34,9 @@ class UserMessage:
         self.reachedLimit = reachedLimit
 
 async def checkMessage(message):
+    if (message.author.bot):
+        print("bot message ignored")
+        return
     userId = message.author.id
     print(message.created_at)
     embeds = message.embeds
@@ -94,16 +98,35 @@ def saveTitleAlts():
     with open('titleAlts.pkl', 'wb') as f:
         pickle.dump(titleAlts, f)
 
+def saveConfig():
+    with open('./config.ini', 'w') as configfile:
+        config.write(configfile)
+
+def removeFilesInFolder(folder = './todaysGallery'):
+    for filename in os.listdir(folder):
+        file_path = os.path.join(folder, filename)
+        try:
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+        except Exception as e:
+            print('Failed to delete %s. Reason: %s' % (file_path, e))
+
 def changeCurrentLimit(ctx, arg):
     print(f"'changeLimit' command has been used by {ctx.author.name}#{ctx.author.discriminator}")
     global LIMIT
     LIMIT = int(arg)
+    config['DEFAULT']['limit'] = str(LIMIT)
+    saveConfig()
     print("Limit has been changed to", arg)
 
 def changeCurrentDelay(ctx, arg):
     print(f"'changeDelay' command has been used by {ctx.author.name}#{ctx.author.discriminator}")
     global DELAY
     DELAY = int(arg)
+    config['DEFAULT']['delay'] = str(DELAY)
+    saveConfig()
     print("Delay has been changed to", arg)
 
 def getCurrentValue(): return (LIMIT, DELAY)
@@ -139,7 +162,7 @@ async def getCams(args):
     spreadData.pop(0)
     matched_lines = []
     line_index = 0
-    args = ' '.join(args)
+    args = ' '.join(args) if type(args) is tuple else args
     args = args.replace("'", "\\'")
     for line in spreadData:
         if str(args).lower() in line.lower().split(',')[0]:
@@ -172,7 +195,7 @@ async def getCams(args):
     return data, gameNames
 
 async def getUUU(args):
-    args = ' '.join(args)
+    args = ' '.join(args) if type(args) is tuple else args
     args = args.replace("'", "\\'")
     response = requests.get('https://framedsc.github.io/GeneralGuides/universal_ue4_consoleunlocker.htm')
     assert response.status_code == 200, 'Wrong status code'
@@ -197,7 +220,7 @@ async def getUUU(args):
     return data, gameNames
 
 async def getGuides(args):
-    args = ' '.join(args)
+    args = ' '.join(args) if type(args) is tuple else args
     args = args.replace("'", "\\'")
     responseAL = requests.get('https://framedsc.github.io/A-L.htm')
     responseMZ = requests.get('https://framedsc.github.io/M-Z.htm')
@@ -241,7 +264,7 @@ async def getGuides(args):
     return data, gameNames
 
 async def getCheats(args):
-    args = ' '.join(args)
+    args = ' '.join(args) if type(args) is tuple else args
     # args = args.replace("'", "\\'")
     response = requests.get("https://framedsc.github.io/cheattablearchive.htm", allow_redirects=True)
     assert response.status_code == 200, 'Wrong status code'
@@ -266,26 +289,82 @@ async def getCheats(args):
     return data, gameNames
 
 async def secondLook(message):
+    authorName = message.author.name + "#" + message.author.discriminator
+    authorId = message.author.id
+    SLDchannel = bot.get_channel(SLDump)
+    if message.author.bot and len(message.mentions) > 0: 
+        authorName = message.mentions[0].name + "#" + message.mentions[0].discriminator
+        authorId = message.mentions[0].id
     userDict = {}
     links = re.findall("(https:\/\/discord.com\/channels\/.*\/.*\d)(?:| )", message.content)
     if len(links) <= 3: return
-    print("---------------------------------------- Building second-look message for " + message.author.name + "#" + message.author.discriminator)
+    print("---------------------------------------- Building second-look message for " + authorName)
     async with message.channel.typing():
         for link in links:
             slink = link.split("/")
             original_message = await bot.get_guild(int(slink[-3])).get_channel(int(slink[-2])).fetch_message(int(slink[-1]))
-            # print(original_message.author.name + "#" + original_message.author.discriminator)
-            # print(original_message.attachments[0].url)
+            raw_shot = requests.get(original_message.attachments[0].url, stream=True).raw
+            print(raw_shot)
+            shot = Image.open(raw_shot)
+            shot = shot.convert(mode="RGB")
+            print(shot)
+            shot.save(f'secondLook/{original_message.attachments[0].filename}.jpg', format="JPEG", quality=60)
+            print("shot saved")
+            sent_message = await SLDchannel.send(file=discord.File(f'secondLook/{original_message.attachments[0].filename}.jpg'))
+            print(sent_message)
             tempDict = {}
             tempDict['name'] = original_message.author.name + "#" + original_message.author.discriminator
-            tempDict['imageUrl'] = original_message.attachments[0].url
-            tempDict['width'] = original_message.attachments[0].width
-            tempDict['height'] = original_message.attachments[0].height
+            tempDict['imageUrl'] = sent_message.attachments[0].url
+            tempDict['width'] = sent_message.attachments[0].width
+            tempDict['height'] = sent_message.attachments[0].height
             tempDict['messageUrl'] = link
             userDict[str(original_message.id)] = tempDict
-    await bot.get_channel(SLChannel).send(f"Here is your link : https://second-look.netlify.app?id={message.author.id}")
+    await bot.get_channel(SLChannel).send(f"Here is your link : https://second-look.netlify.app?id={authorId}")
     print("---------------------------------------- Building ended")
-    ref.child(str(message.author.id)).set(userDict)
+    ref.child(str(authorId)).set(userDict)
+
+async def todaysGallery():
+    userDict = {}
+    day_ago = datetime.datetime.today() - datetime.timedelta(days=1)
+    SYSchannel = bot.get_channel(SYSChannel)
+    SLDchannel = bot.get_channel(SLDump)
+    if SYSchannel is None: return
+    print("---------------------------------------- Building today's gallery")
+    messages = [message async for message in SYSchannel.history(limit=200, after=day_ago)]
+    for msg in messages:
+        # trying to get unique reactions needs some api calls, so instead i'm just counting how much reactions for each emojis and if one of them have more than 5, the message is taken
+        # unfortunately, shots that has been posted right before the function is called won't likely make it, maybe it's not a good idea to ask for a minimum reactions count 
+        enough_reaction = False
+        for react in msg.reactions:
+            if react.count > 5:
+                enough_reaction = True
+                print("break")
+                break
+        if enough_reaction:
+            raw_shot = requests.get(msg.attachments[0].url, stream=True).raw
+            print(raw_shot)
+            shot = Image.open(raw_shot)
+            shot = shot.convert(mode="RGB")
+            print(shot)
+            shot.save(f'todaysGallery/{msg.attachments[0].filename}.jpg', format="JPEG", quality=50)
+            print("shot saved")
+            sent_message = await SLDchannel.send(file=discord.File(f'todaysGallery/{msg.attachments[0].filename}.jpg'))
+            print(sent_message)
+            tempDict = {}
+            tempDict['name'] = msg.author.name + "#" + msg.author.discriminator
+            tempDict['imageUrl'] = sent_message.attachments[0].url
+            tempDict['width'] = sent_message.attachments[0].width
+            tempDict['height'] = sent_message.attachments[0].height
+            tempDict['messageUrl'] = msg.jump_url
+            userDict[str(sent_message.id)] = tempDict
+        print("next message")
+    print("end")
+    ref.child(str(bot.user.id)).set(userDict)
+    # await bot.get_channel(889793521106714634).send(f"Today's gallery : https://second-look.netlify.app?id={bot.user.id}")
+    await bot.get_channel(SLChannel).send(f"Today's gallery : https://second-look.netlify.app?id={bot.user.id}")
+    bot.dispatch("today_gallery_end")
+    removeFilesInFolder("./todaysGallery")
+    print("---------------------------------------- Building ended")
 
 async def startThread(message):
     title = f"Hello There, {message.author.name}"
@@ -296,12 +375,13 @@ async def startThread(message):
 
 async def over2000(data, gameNames, query):
     isOver2000 = len(data) > 2000
+    query = ' '.join(query) if type(query) is tuple else query
     if(isOver2000):
         # response = "Search query is too vague, there are too many results to show.\n" + str(len(gameNames)) + " games corresponds to your query, please retype the command with one of them : \n"
-        response = random.choice(tooVague).format(' '.join(query))
+        response = random.choice(tooVague).format(query)
         response += "  |  ".join([name for name in gameNames])
         if(len(gameNames) > 15):
-            response = "I found too many results for `{}` ! Please be more specific !".format(' '.join(query))
+            response = "I found too many results for `{}` ! Please be more specific !".format(query)
         return response
     return data
 
@@ -350,12 +430,12 @@ class BingoPoints:
 
 class EphemeralBingo(View):
 
-    def __init__(self, ctx, timeout = None):
+    def __init__(self, channelId, timeout = None):
         super().__init__(timeout=timeout)
-        self.chanId = ctx.channel.id
+        self.chanId = channelId
         
     @discord.ui.button(label='Check', style=discord.ButtonStyle.blurple)
-    async def checkCompact(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def checkCompact(self, interaction: discord.Interaction, button: discord.ui.Button):
         try:
             padawan = interaction.user.guild.get_role(PadawanRole)
         except AttributeError:
@@ -486,7 +566,7 @@ def resetBingoBoard():
     crossBingo(-2, -1, True)
 
 class Confirm(View):
-    def __init__(self, players: list[str], customEmoji = None):
+    def __init__(self, players: list[str], customEmoji1 = None, customEmoji2 = None):
         super().__init__()
         self.connect4 = [
             [-1, -1, -1, -1, -1, -1, -1],
@@ -497,37 +577,51 @@ class Confirm(View):
             [-1, -1, -1, -1, -1, -1, -1],
         ]
         self.players = players
-        self.emoji = customEmoji
+        self.emoji1 = customEmoji1
+        self.emoji2 = customEmoji2
 
     # When the confirm button is pressed, set the inner value to `True` and
     # stop the View from listening to more input.
     # We also send the user an ephemeral message that we're confirming their choice.
     @discord.ui.button(label='Confirm', style=discord.ButtonStyle.green)
-    async def confirm(self, button: discord.ui.Button, interaction: discord.Interaction):
-        if interaction.user.id == self.players[1]:
-            await interaction.response.edit_message(content=toDiscordString(self.connect4, 3, self.players[1], 1, customEmoji=self.emoji), view=Connect4(self.connect4, players=self.players, customEmoji=self.emoji))
-            self.stop()
+    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.players[1] is not None:
+            if interaction.user.id == self.players[1]:
+                await interaction.response.edit_message(content=toDiscordString(self.connect4, 3, self.players[1], 1, customEmoji1=self.emoji1, customEmoji2=self.emoji2), view=Connect4(self.connect4, players=self.players, customEmoji1=self.emoji1, customEmoji2=self.emoji2))
+                self.stop()
+            else:
+                await interaction.response.edit_message(content=f"<@{self.players[0]}> wants to play connect4 with you <@{self.players[1]}>, will you accept ? PS: Only the mentionned person can respond")
         else:
-            await interaction.response.edit_message(content=f"<@{self.players[0]}> wants to play connect4 with you <@{self.players[1]}>, will you accept ? PS: Only the mentionned person can respond")
+            self.players[1] = interaction.user.id
+            await interaction.response.edit_message(content=toDiscordString(self.connect4, 3, self.players[1], 1, customEmoji1=self.emoji1, customEmoji2=self.emoji2), view=Connect4(self.connect4, players=self.players, customEmoji1=self.emoji1, customEmoji2=self.emoji2))
+            self.stop()
 
     # This one is similar to the confirmation button except sets the inner value to `False`
     @discord.ui.button(label='Cancel', style=discord.ButtonStyle.grey)
-    async def cancel(self, button: discord.ui.Button, interaction: discord.Interaction):
-        if interaction.user.id == self.players[1]:
+    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.players[1] is not None:
+            if interaction.user.id == self.players[1]:
+                button.disabled = True
+                for child in self.children:
+                    child.disabled = True
+                await interaction.response.edit_message(content='Sorry, but the offer got rejected', view=self)
+                self.stop()
+            else:
+                await interaction.response.edit_message(content=f"<@{self.players[0]}> wants to play connect4 with you <@{self.players[1]}>, will you accept ? PS: Only the mentionned person can respond")
+        else:
             button.disabled = True
             for child in self.children:
                 child.disabled = True
             await interaction.response.edit_message(content='Sorry, but the offer got rejected', view=self)
             self.stop()
-        else:
-            await interaction.response.edit_message(content=f"<@{self.players[0]}> wants to play connect4 with you <@{self.players[1]}>, will you accept ? PS: Only the mentionned person can respond")
 
 class Connect4(View):
-    def __init__(self, board, players: list[str], customEmoji = None):
+    def __init__(self, board, players: list[str], customEmoji1 = None, customEmoji2 = None):
         super().__init__()
         self.cursor = 3
         self.c4Board = board
-        self.emoji = customEmoji
+        self.emoji1 = customEmoji1
+        self.emoji2 = customEmoji2
         self.players = players
         self.turns = 2
         self.playerTurn = 1
@@ -584,27 +678,27 @@ class Connect4(View):
             self.c4Board[dot[0]][dot[1]] = 2 if player == 0 else 3
 
     @discord.ui.button(label='', style=discord.ButtonStyle.gray, emoji="⏪")
-    async def maxLeft(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def maxLeft(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id == self.players[self.playerTurn]:
             if self.children[2].disabled: self.children[2].disabled = False
             self.cursor = 0
             self.replay.append("maxLeft")
             if self.c4Board[5][self.cursor] != -1:
                 self.children[2].disabled = True
-            await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], self.playerTurn, customEmoji=self.emoji), view=self)
+            await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], self.playerTurn, customEmoji1=self.emoji1, customEmoji2=self.emoji2), view=self)
 
     @discord.ui.button(label='', style=discord.ButtonStyle.gray, emoji="◀️")
-    async def left(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def left(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id == self.players[self.playerTurn]:
             if self.children[2].disabled: self.children[2].disabled = False
             self.cursor -= 1 if self.cursor > 0 else 0
             self.replay.append("left")
             if self.c4Board[5][self.cursor] != -1:
                 self.children[2].disabled = True
-            await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], self.playerTurn, customEmoji=self.emoji), view=self)
+            await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], self.playerTurn, customEmoji1=self.emoji1, customEmoji2=self.emoji2), view=self)
 
     @discord.ui.button(label='', style=discord.ButtonStyle.blurple, emoji="🔽")
-    async def add(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def add(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id == self.players[self.playerTurn]:
             if self.children[2].disabled: self.children[2].disabled = False
             self.addTurn()
@@ -615,34 +709,34 @@ class Connect4(View):
                 if self.c4Board[5][self.cursor] != -1:
                     self.children[2].disabled = True
                 self.replay.append("add")
-                await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], self.playerTurn, customEmoji=self.emoji), view=self)
+                await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], self.playerTurn, customEmoji1=self.emoji1, customEmoji2=self.emoji2), view=self)
             else:
                 self.playerTurn = not self.playerTurn
                 for child in self.children:
                     child.disabled = True
                 self.replay.append("add")
-                await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], self.playerTurn, customEmoji=self.emoji, hasWon=hasWin, hasTied=tie, replay=self.replay), view=self)
+                await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], self.playerTurn, customEmoji1=self.emoji1, customEmoji2=self.emoji2, hasWon=hasWin, hasTied=tie, replay=self.replay), view=self)
                 self.stop()
 
     @discord.ui.button(label='', style=discord.ButtonStyle.gray, emoji="▶️")
-    async def right(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def right(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id == self.players[self.playerTurn]:
             if self.children[2].disabled: self.children[2].disabled = False
             self.cursor += 1 if self.cursor < 6 else 0
             self.replay.append("right")
             if self.c4Board[5][self.cursor] != -1:
                 self.children[2].disabled = True
-            await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], self.playerTurn, customEmoji=self.emoji), view=self)
+            await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], self.playerTurn, customEmoji1=self.emoji1, customEmoji2=self.emoji2), view=self)
 
     @discord.ui.button(label='', style=discord.ButtonStyle.gray, emoji="⏩")
-    async def maxRight(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def maxRight(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id == self.players[self.playerTurn]:
             if self.children[2].disabled: self.children[2].disabled = False
             self.cursor = 6
             self.replay.append("maxRight")
             if self.c4Board[5][self.cursor] != -1:
                 self.children[2].disabled = True
-            await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], self.playerTurn, customEmoji=self.emoji), view=self)
+            await interaction.response.edit_message(content=toDiscordString(self.c4Board, self.cursor, self.players[self.playerTurn], self.playerTurn, customEmoji1=self.emoji1, customEmoji2=self.emoji2), view=self)
 
 def addToken(board: list, cursor, player):
     for i in range(len(board)):
@@ -653,7 +747,7 @@ def addToken(board: list, cursor, player):
             return board
     return board
 
-def toDiscordString(board: list, cursor: int, userId: int, player: int, customEmoji = None, hasWon = False, hasTied = False, replay = []):
+def toDiscordString(board: list, cursor: int, userId: int, player: int, customEmoji1 = None, customEmoji2 = None, hasWon = False, hasTied = False, replay = []):
     formattedBoard = "<:air:927935249982300251>"
     for c in range(7):
         if c == cursor:
@@ -668,16 +762,19 @@ def toDiscordString(board: list, cursor: int, userId: int, player: int, customEm
             if board[i][j] == 2:
                 formattedBoard += '<a:c4_yellowBlink:933719867360677898>'
             if board[i][j] == 1:
-                formattedBoard += '🔴' if customEmoji is None else customEmoji
+                formattedBoard += '🔴' if customEmoji1 is None else customEmoji1
             elif board[i][j] == 0:
-                formattedBoard += '🟡'
+                formattedBoard += '🟡' if customEmoji2 is None else customEmoji2
             elif board[i][j] == -1:
                 formattedBoard += '<:air:927935249982300251>'
         formattedBoard += '❕\n'
     formattedBoard += '➖➖➖➖➖➖➖➖➖'
     if not hasTied:
         formattedBoard += f'<@{userId}>\'s turn ' if not hasWon else f"<@{userId}> has won ! "
-        formattedBoard += "🟡" if player == 1 else "🔴" if customEmoji is None else customEmoji
+        if player == 1:
+            formattedBoard += "🔴" if customEmoji2 is None else customEmoji2
+        else:
+            formattedBoard += "🟡" if customEmoji1 is None else customEmoji1
     else: formattedBoard += "It's a tie..."
     if hasWon: formattedBoard += f"\nReplay : https://connect4-replay.netlify.app/?data={'-'.join(map(str, replay))}"
     return formattedBoard
@@ -692,6 +789,17 @@ async def getShotReactions(message) -> int:
             users.append(user)
     users = list(filter(lambda u: u.id != message.author.id, dict.fromkeys(users)))
     return len(users)
+
+async def notifyHOFedUser(message):
+    embed_author = message.embeds[0].author
+    author = re.findall(r"Shot by (.*)", embed_author.name)[0]
+    user = discord.utils.find(lambda m: str(m) == author, message.guild.members)
+    if user is not None:
+        DMChannel = await user.create_dm()
+        url_view = discord.ui.View()
+        url_view.add_item(discord.ui.Button(label='Go to Message', style=discord.ButtonStyle.url, url=message.jump_url))
+        await DMChannel.send(f"Hello {user.name}, your shot has been hoffed !", view=url_view)
+    else: return
 
 if os.path.isfile('./messages.pkl'):
     with open('messages.pkl', 'rb') as f:
@@ -713,3 +821,14 @@ if os.path.isfile('./titleAlts.pkl'):
         titleAlts = pickle.load(f)
 else:
     with open('titleAlts.pkl', 'wb'): pass
+
+if not os.path.isfile('./config.ini'):
+    config['DEFAULT'] = {
+        'delay': '7200',
+        'limit': '5'
+    }
+    saveConfig()
+else:
+    config.read('config.ini')
+    DELAY = int(config['DEFAULT']['delay'])
+    LIMIT = int(config['DEFAULT']['limit'])

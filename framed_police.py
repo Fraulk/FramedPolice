@@ -3,19 +3,24 @@ import time
 import random
 import asyncio
 import datetime
+from threading import Timer
 
 from vars import *
+from app_commands import *
 from functions import *
 from wordle import *
 from guess_the_vp import *
 
 # pip install -U git+https://github.com/Rapptz/discord.py
 
+# https://discord.com/api/oauth2/authorize?client_id=873628046194778123&permissions=543582186560&scope=bot
+
 @bot.event
 async def on_ready():
     print(f"{bot.user} logged in")
     if not os.path.isfile('./tempBingo.png'):
         recreateBingo(emptyBingo)
+    bot.dispatch("today_gallery")
 
 @bot.event
 async def on_message(message):
@@ -27,6 +32,8 @@ async def on_message(message):
         await secondLook(message)
     elif message.channel.id == IntroChannel:
         await startThread(message)
+    elif message.channel.id == HOFChannel:
+        await notifyHOFedUser(message)
     elif message.content.lower() == "good bot":
         await message.add_reaction(random.choice(goodReaction))
         await react(message, "good", bot.user.avatar)
@@ -89,26 +96,41 @@ async def on_member_remove(member):
     channel = bot.get_channel(LeftChannel)
     await channel.send(member.mention + " (" + member.name + ") has left the server")
 
-@bot.command(name='changeDelay', help='Change the delay after reaching the limit for posting shots, with number of seconds')
+# @bot.event
+# async def on_command_error(event_method, *args, **kwargs):
+#     print(event_method)
+#     print(args)
+#     print(kwargs)
+
+@bot.event
+async def on_error(ctx, error):
+    if isinstance(error, discord.ext.commands.errors.MissingAnyRole):
+        await ctx.send(f"Sorry but you can't use that command <@{ctx.author.id}>")
+
+@bot.hybrid_command(name='change_delay', help='Change the delay after reaching the limit for posting shots, with number of seconds')
+@app_commands.rename(arg='delay')
+@app_commands.describe(arg='The delay to wait before uploading other shots')
 @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
 async def changeDelay(ctx, arg):
     changeCurrentDelay(ctx, arg)
     await ctx.send(f"Delay has been changed to {arg}")
 
-@bot.command(name='changeLimit', help='Change the limit for posting shots')
+@bot.hybrid_command(name='change_limit', help='Change the limit for posting shots')
+@app_commands.rename(arg='limit')
+@app_commands.describe(arg='The limit of shot to upload within the current delay, 86400 = 24h, 43200 = 12h')
 @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
 async def changeLimit(ctx, arg):
     changeCurrentLimit(ctx, arg)
     await ctx.send(f"Limit has been changed to {arg}")
 
-@bot.command(name='currentValue', help='Shows the current values for DELAY and LIMIT')
+@bot.hybrid_command(name='current_value', help='Shows the current values for DELAY and LIMIT')
 @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
 async def currentValue(ctx):
     print(f"'currentValue' command has been used by {ctx.author.name}#{ctx.author.discriminator}")
     limit, delay = getCurrentValue()
     await ctx.send(f"LIMIT = {limit}\nDELAY = {delay}")
 
-@bot.command(name='dumpR', help='Shows data about those who reached the limit and have been dm\'d by the bot')
+@bot.hybrid_command(name='dumpr', help='Shows data about those who reached the limit and have been dm\'d by the bot')
 @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
 async def dumpR(ctx):
     print(f"'dumpR' command has been used by {ctx.author.name}#{ctx.author.discriminator}")
@@ -128,7 +150,7 @@ async def dumpR(ctx):
                 result = ""
     await ctx.send(result if len(result) > 0 else "No data yet") # did i forgot to remove this ?
 
-@bot.command(name='dump', help='Shows data about everybody')
+@bot.hybrid_command(name='dump', help='Shows data about everybody')
 @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
 async def dump(ctx):
     print(f"'dump' command has been used by {ctx.author.name}#{ctx.author.discriminator}")
@@ -148,8 +170,8 @@ async def dump(ctx):
                 result = ""
     await ctx.send(result if len(result) > 0 else "No data yet") # did i forgot to remove this ?
 
-@bot.command(name='check', help='Shows data about you')
-async def check(ctx):
+@bot.hybrid_command(name='check', help='Shows data about you')
+async def check(ctx: commands.Context):
     result = ""
     for msg in usersMessages:
         if msg.id == ctx.author.id and msg.count > 0:
@@ -161,6 +183,7 @@ async def check(ctx):
             result += f"**{msg.name}**: Remaining time: **{datetime.timedelta(seconds=round(remainingTime))}**, Shots posted: **{msgCount}**, Has reached the limit: **{msgReachedLimit}**\n"
     await ctx.send(result if len(result) > 0 else "No data yet")
 
+# App commands equivalent in app_commands.py 
 @bot.command(name='reset', help='Resets the count for a person, with his ID as parameter')
 @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
 async def reset(ctx, arg):
@@ -168,21 +191,21 @@ async def reset(ctx, arg):
     print(f"'reset' command has been used by {ctx.author.name}#{ctx.author.discriminator}")
     await ctx.send(response)
 
-@bot.command(name='resetAll', help='Resets the count for everyone')
+@bot.hybrid_command(name='reset_all', help='Resets the count for everyone')
 @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
 async def resetAll(ctx):
     await resetAllUsers()
     print(f"'resetAll' command has been used by {ctx.author.name}#{ctx.author.discriminator}")
     await ctx.send("Everyone has been reset")
 
-@bot.command(name='countShots', help='Count the last 7 days shots or from a certain date')
-@commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
-async def countShots(ctx, *args):
-    week_ago = datetime.datetime.today() - datetime.timedelta(days=7)
-    print(week_ago)
-    channel = bot.get_channel(SYSChannel)
-    messages = await channel.history(limit=None, after=week_ago).flatten()
-    print(len(messages))
+# @bot.command(name='countShots', help='Count the last 7 days shots or from a certain date')
+# @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
+# async def countShots(ctx, *args):
+#     week_ago = datetime.datetime.today() - datetime.timedelta(days=7)
+#     print(week_ago)
+#     channel = bot.get_channel(SYSChannel)
+#     messages = await channel.history(limit=None, after=week_ago).flatten()
+#     print(len(messages))
 
 @bot.command(name='cam', help='Search for a freecams or a tool by string. ex: !cam cyberpunk 2077')
 async def cam(ctx, *args):
@@ -202,11 +225,7 @@ async def uuu(ctx, *args):
     async with ctx.typing():
         data, gameNames = await getUUU(args)
         if len(data) == 0: data = random.choice(notFound).format(' '.join(args))
-        e = discord.Embed(title="FRAMED. Screenshot Community",
-                          url="https://framedsc.com/",
-                          description="© 2019-2022 FRAMED. All rights reserved. ",
-                          color=0x9a9a9a)
-        e.set_thumbnail(url="https://cdn.discordapp.com/emojis/575642684006334464.png?size=128")
+        e = FramedEmbed
         data = await over2000(data, gameNames, args)
     await ctx.send(content=data, embed=e) if len(data) < 2000 else await ctx.send("Search query is too vague, there are too many results to show")
 
@@ -215,11 +234,7 @@ async def guide(ctx, *args):
     async with ctx.typing():
         data, gameNames = await getGuides(args)
         if len(data) == 0: data = random.choice(notFound).format(' '.join(args))
-        e = discord.Embed(title="FRAMED. Screenshot Community",
-                          url="https://framedsc.com/",
-                          description="© 2019-2022 FRAMED. All rights reserved. ",
-                          color=0x9a9a9a)
-        e.set_thumbnail(url="https://cdn.discordapp.com/emojis/575642684006334464.png?size=128")
+        e = FramedEmbed
         data = await over2000(data, gameNames, args)
     await ctx.send(content=data, embed=e) if len(data) < 2000 else await ctx.send("Search query is too vague, there are too many results to show")
 
@@ -228,11 +243,7 @@ async def cheat(ctx, *args):
     async with ctx.typing():
         data, gameNames = await getCheats(args)
         if len(data) == 0: data = random.choice(notFound).format(' '.join(args))
-        e = discord.Embed(title="FRAMED. Screenshot Community",
-                          url="https://framedsc.com/",
-                          description="© 2019-2022 FRAMED. All rights reserved. ",
-                          color=0x9a9a9a)
-        e.set_thumbnail(url="https://cdn.discordapp.com/emojis/575642684006334464.png?size=128")
+        e = FramedEmbed
         data = await over2000(data, gameNames, args)
     await ctx.send(content=data, embed=e) if len(data) < 2000 else await ctx.send("Search query is too vague, there are too many results to show")
 
@@ -255,11 +266,7 @@ async def tool(ctx, *args):
         if len(data) == 0: data = random.choice(notFound).format(' '.join(args))
         if random.randint(0, 9) <= 1:
             data += "\n**╘** : <https://discord.com/channels/549986543650078722/549986543650078725/893340504719249429>"
-        e = discord.Embed(title="FRAMED. Screenshot Community",
-                          url="https://framedsc.com/",
-                          description="© 2019-2022 FRAMED. All rights reserved. ",
-                          color=0x9a9a9a)
-        e.set_thumbnail(url="https://cdn.discordapp.com/emojis/575642684006334464.png?size=128")
+        e = FramedEmbed
         data = await over2000(data, camGameNames + uuuGameNames + guideGameNames + cheatGameNames, args)
     await ctx.send(content=data, embed=e) if len(data) < 2000 else await ctx.send("Search query is too vague, there are too many results to show") # + str(len(data))
 
@@ -267,12 +274,10 @@ async def tool(ctx, *args):
 async def tools(ctx, *args):
     await tool(ctx, *args)
 
-commandCooldown = 1000
-cooldownEnd = 0
 @bot.command(name="bingo", help="Play to the framed bingo !")
 @commands.cooldown(1, 30, commands.BucketType.guild)
 async def bingo(ctx, *args):
-    bingoView = EphemeralBingo(ctx) # ctx as param
+    bingoView = EphemeralBingo(ctx.channel.id) # ctx as param
     # e = discord.Embed(title="Bingo card",
     #                   url="https://discord.com/channels/549986543650078722/549986543650078725/914511447176921098",
     #                   description="",
@@ -281,10 +286,11 @@ async def bingo(ctx, *args):
     # e.set_image(url="https://cdn.discordapp.com/attachments/549986543650078725/914511446975582218/bingo2.png")
     await ctx.send("", view=bingoView, file=discord.File('tempBingo.png'))
 
-@bot.command(name="resetBingo", help="Manually reset the bingo")
+@bot.hybrid_command(name="reset_bingo", help="Manually reset the bingo")
 @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
 async def resetBingo(ctx):
     resetBingoBoard()
+    await ctx.send("The bingo card has been reset")
 
 @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
 @bot.command(name="changeBingo", help="Change the bingo image (change takes effect at the next round)")
@@ -307,92 +313,79 @@ async def on_bingo_winner(user, channelId):
     channel = bot.get_channel(channelId)
     await channel.send("The bingo has been completed !", file=discord.File('./lastBingo.png'))
 
-@commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
-@bot.command(name="addTitle", help="Add a game title and all his alts")
-async def addTitle(ctx, *args):
-    global titleAlts
-    simpleArg = None
-    simpleName = None
-    args = ' '.join(args)
-    args = args.replace("'", "\\'")
-    if args == '': return
-    if args.find(';') > -1:
-        simpleArg = args.split(';')[1].lstrip(' ')
-        simpleName = args.split(';')[0].rstrip(' ')
-        if simpleArg == '' or simpleName == '': return
-        if simpleArg.find(',') > -1:
-            simpleArg = simpleArg.split(',')
-            simpleArg = [e.lstrip(' ').rstrip(' ') for e in simpleArg]
-        index = next((i for i, item in enumerate(titleAlts) if item.get(simpleName) is not None), None)
-        if index is not None:
-            titleAlts[index][simpleName].append(simpleArg) if isinstance(simpleArg, str) else titleAlts[index][simpleName].extend(simpleArg)
-        else:
-            alts = {}
-            alts[simpleName] = [simpleArg] if isinstance(simpleArg, str) else simpleArg
-            titleAlts.append(alts)
-        saveTitleAlts()
-        await ctx.message.add_reaction('✅')
-        # print(titleAlts)
-        # print(next((i for i, item in enumerate(titleAlts) if simpleArg in item[simpleName]), None))
+# @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
+# @bot.command(name="addTitle", help="Add a game title and all his alts")
+# async def addTitle(ctx, *args):
+#     global titleAlts
+#     simpleArg = None
+#     simpleName = None
+#     args = ' '.join(args)
+#     args = args.replace("'", "\\'")
+#     if args == '': return
+#     if args.find(';') > -1:
+#         simpleArg = args.split(';')[1].lstrip(' ')
+#         simpleName = args.split(';')[0].rstrip(' ')
+#         if simpleArg == '' or simpleName == '': return
+#         if simpleArg.find(',') > -1:
+#             simpleArg = simpleArg.split(',')
+#             simpleArg = [e.lstrip(' ').rstrip(' ') for e in simpleArg]
+#         index = next((i for i, item in enumerate(titleAlts) if item.get(simpleName) is not None), None)
+#         if index is not None:
+#             titleAlts[index][simpleName].append(simpleArg) if isinstance(simpleArg, str) else titleAlts[index][simpleName].extend(simpleArg)
+#         else:
+#             alts = {}
+#             alts[simpleName] = [simpleArg] if isinstance(simpleArg, str) else simpleArg
+#             titleAlts.append(alts)
+#         saveTitleAlts()
+#         await ctx.message.add_reaction('✅')
+#         # print(titleAlts)
+#         # print(next((i for i, item in enumerate(titleAlts) if simpleArg in item[simpleName]), None))
 
-@commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
-@bot.command(name="removeTitle", help="Remove a game title and all his alts")
-async def removeTitle(ctx, *args):
-    global titleAlts
-    args = ' '.join(args)
-    args = args.replace("'", "\\'")
-    if args == '': return
-    titleAlts[:] = [d for d in titleAlts if d.get(args) is None]
-    saveTitleAlts()
-    await ctx.message.add_reaction('✅')
+# @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
+# @bot.command(name="removeTitle", help="Remove a game title and all his alts")
+# async def removeTitle(ctx, *args):
+#     global titleAlts
+#     args = ' '.join(args)
+#     args = args.replace("'", "\\'")
+#     if args == '': return
+#     titleAlts[:] = [d for d in titleAlts if d.get(args) is None]
+#     saveTitleAlts()
+#     await ctx.message.add_reaction('✅')
 
-@bot.command(name="showTitle", help="Remove a game title and all his alts")
-async def showTitle(ctx, *args):
-    global titleAlts
-    content = ""
-    args = ' '.join(args)
-    args = args.replace("'", "\\'")
-    if args == '':
-        i = 0
-        for d in titleAlts:
-            gameTitle = next(iter(d))
-            content += f"**{gameTitle}** : {', '.join(d.get(gameTitle))}\n"
-            if i % 15 == 0:
-                await ctx.send(content if len(content) < 2000 else "Too much data to send, <@192300712049246208> failed his job so please bully him and make him fix me")
-                content = ""
-            i += 1
-    else:
-        index = next((i for i, item in enumerate(titleAlts) if item.get(args) is not None), None)
-        if index is not None:
-            gameTitle = next(iter(titleAlts[index]))
-            content += f"**{gameTitle}** : {', '.join(titleAlts[index].get(args))}"
-        else:
-            content = "Unknown game"
-    await ctx.send(content if len(content) < 2000 else "Too much data to send, <@192300712049246208> failed his job so please bully him and make him fix me")
+# @bot.command(name="showTitle", help="Shows a game title and all his alts")
+# async def showTitle(ctx, *args):
+#     global titleAlts
+#     content = ""
+#     args = ' '.join(args)
+#     args = args.replace("'", "\\'")
+#     if args == '':
+#         i = 0
+#         for d in titleAlts:
+#             gameTitle = next(iter(d))
+#             content += f"**{gameTitle}** : {', '.join(d.get(gameTitle))}\n"
+#             if i % 15 == 0:
+#                 await ctx.send(content if len(content) < 2000 else "Too much data to send, <@192300712049246208> failed his job so please bully him and make him fix me")
+#                 content = ""
+#             i += 1
+#     else:
+#         index = next((i for i, item in enumerate(titleAlts) if item.get(args) is not None), None)
+#         if index is not None:
+#             gameTitle = next(iter(titleAlts[index]))
+#             content += f"**{gameTitle}** : {', '.join(titleAlts[index].get(args))}"
+#         else:
+#             content = "Unknown game"
+#     await ctx.send(content if len(content) < 2000 else "Too much data to send, <@192300712049246208> failed his job so please bully him and make him fix me")
 
-@bot.command(name="connect")
-async def connect(ctx, arg, arg2 = None):
-    view = Confirm([ctx.message.author.id, ctx.message.mentions[0].id], arg2)
-    await ctx.send(content=f"{ctx.message.author.mention} wants to play connect4 with you {ctx.message.mentions[0].mention}, will you accept ?", view=view)
-    # Wait for the View to stop listening for input...
-    await view.wait()
+# @bot.command(name="connect")
+# async def connect(ctx, arg, arg2 = None, arg3 = None):
+#     view = Confirm([ctx.message.author.id, ctx.message.mentions[0].id], arg2, arg3)
+#     await ctx.send(content=f"{ctx.message.author.mention} wants to play connect4 with you {ctx.message.mentions[0].mention}, will you accept ?", view=view)
+#     # Wait for the View to stop listening for input...
+#     await view.wait()
 
-@bot.command(name='mario')
-async def mario(ctx, *args):
-    content = marioEmoji
-    await ctx.send(content)
-
-@bot.command(name='golf')
-async def shocked(ctx, *args):
-    content = golfFrames[0]
-    message = await ctx.send(content)
-    for frame in range(1, len(golfFrames)):
-        await asyncio.sleep(1)
-        await message.edit(content=golfFrames[frame])
-
-@bot.command(name='framedle')
+@bot.hybrid_command(name='framedle', help="Play framedle ! A Framed rip-off of the Wordle game")
 @commands.cooldown(1, 60, commands.BucketType.guild)
-async def framedle(ctx, *args):
+async def framedle(ctx):
     framedleView = PlayFramedle()
     await ctx.send("Play Framedle", view=framedleView)
 
@@ -400,7 +393,7 @@ guessVpThread = None
 isGVPRunning = False
 currentShot = None
 GVPChannel = None
-@bot.command(name='gvp')
+@bot.hybrid_command(name='gvp', help="Play GVP, aka Guess the Virtual Photographer")
 async def gvp(ctx):
     global isGVPRunning
     global guessVpThread
@@ -461,12 +454,13 @@ async def on_thread_update(before, after):
         guessVpThread = None
 
 @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
-@bot.command(name='resetGVP')
+@bot.hybrid_command(name='reset_gvp', help="Reset last GVP game")
 async def resetGVP(ctx):
     global isGVPRunning
     isGVPRunning = False
     if guessVpThread != None:
         await guessVpThread.delete()
+        await ctx.send("Last GVP game has been reset")
 
 @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
 @bot.command(name='getScore')
@@ -482,8 +476,23 @@ async def getScore(ctx, *args):
             reactList = [await getShotReactions(await channel.fetch_message(r)) for r in args]
             await ctx.send(reactList)
 
-@bot.command(name='help')
-async def help(ctx):
+# Test command for HOF notify
+# @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
+# @bot.command(name='embed')
+# async def embed(ctx, *args):
+#     e = FramedEmbed
+#     e.set_author(name="Shot by Fraulk#6318")
+#     channel = bot.get_channel(HOFChannel)
+#     await channel.send(embed=e)
+
+# Test command for today's gallery, don't forget to hardcode the output channel id to something else than framed second look channel
+@commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
+@bot.command(name='tg')
+async def tg(ctx):
+    await todaysGallery()
+
+@bot.tree.command(description='Shows the list of commands the bot can execute. The bot\'s response will be visible only to you')
+async def help(interaction: discord.Interaction):
     e = discord.Embed(title="List of commands",
                       url="https://github.com/Fraulk/FramedPolice",
                       description="",
@@ -495,11 +504,11 @@ async def help(ctx):
     e.add_field(name=helpMsg['uuu']['name'], value=helpMsg['uuu']['description'], inline=False)
     e.add_field(name=helpMsg['cheat']['name'], value=helpMsg['cheat']['description'], inline=False)
     e.add_field(name=helpMsg['tool']['name'], value=helpMsg['tool']['description'], inline=False)
-    if ctx.guild is not None:
-        FoudersEd = discord.utils.get(ctx.guild.roles, id=549988038516670506)
-        mods = discord.utils.get(ctx.guild.roles, id=549988228737007638)
-        testFoudersEd = discord.utils.get(ctx.guild.roles, id=874375168204611604)
-        if FoudersEd in ctx.author.roles or mods in ctx.author.roles or testFoudersEd in ctx.author.roles:
+    if interaction.guild is not None:
+        FoudersEd = discord.utils.get(interaction.guild.roles, id=549988038516670506)
+        mods = discord.utils.get(interaction.guild.roles, id=549988228737007638)
+        testFoudersEd = discord.utils.get(interaction.guild.roles, id=874375168204611604)
+        if FoudersEd in interaction.user.roles or mods in interaction.user.roles or testFoudersEd in interaction.user.roles:
             e.add_field(name=helpMsg['getScore']['name'], value=helpMsg['getScore']['description'], inline=False)
             e.add_field(name=helpMsg['changeDelay']['name'], value=helpMsg['changeDelay']['description'], inline=False)
             e.add_field(name=helpMsg['changeLimit']['name'], value=helpMsg['changeLimit']['description'], inline=False)
@@ -517,9 +526,26 @@ async def help(ctx):
     e.add_field(name=helpMsg['gvp']['name'], value=helpMsg['gvp']['description'], inline=False)
     e.add_field(name=helpMsg['special']['name'], value=helpMsg['special']['description'], inline=False)
     # e.set_image(url="https://cdn.discordapp.com/emojis/575642684006334464.png?size=40")
-    e.set_footer(text="Made by Fraulk", icon_url="https://cdn.discordapp.com/avatars/192300712049246208/0663e3577e2759aa2ee0b75a4ec8f0cc.webp?size=128")
+    # e.set_footer(text="Made by Fraulk", icon_url="https://cdn.discordapp.com/avatars/192300712049246208/0663e3577e2759aa2ee0b75a4ec8f0cc.webp?size=128")
     # does the gif version of my pfp still exists after nitro ends ? https://cdn.discordapp.com/avatars/192300712049246208/a_c7d1c089c53b152ed0b3b00304fa3307.gif?size=40
-    await ctx.send(embed=e)
+    await interaction.response.send_message(embed=e, ephemeral=True)
+
+@bot.event
+async def on_today_gallery():
+    await asyncio.sleep(secs)
+    await todaysGallery()
+
+@bot.event
+async def on_today_gallery_end():
+    await asyncio.sleep(datetime.timedelta(days=1).total_seconds())
+    await todaysGallery()
+
+# i should put this in a function and call it for the sleep and so i could just have one event function, but oh god i'm so lazy
+x = datetime.datetime.today()
+y = x.replace(day=x.day, hour=18, minute=0, second=0, microsecond=0) + datetime.timedelta(days=1)
+delta_t = y - x
+secs = delta_t.total_seconds()
+# secs = 60
 
 # BUG : when multiple person spamm shots, sometime the bot ignore the event/code and some shots bypass the limit, it may be caused by the fact that 
 # 1. 6th shot get deleted 2. on_message_delete event then decrease user count 3. bot can't keep up so the limit decrease without increasing first or smthng or some events are simply ignored
@@ -532,9 +558,25 @@ async def help(ctx):
 # FIXME : catch commands used without arguments
 # TODO : make the bot detect birthday on message
 # TODO : i should adapt the code for tiny pfp
-# TODO : when !connect without mention, let every one to be the opponent
 # TODO : Would actually help if we had an automated system of sorts, maybe adding a specific reaction on images you think are nice, and then the bot posts your link in the second look channel after a couple of days
-# TODO : can the Bot be setup so it DM´s or pings you when a Picture of you got voted into HoF?
 # TODO : make the bot detects on_reaction for sys and make a list of shots near the hof to print them in second look
+# TODO : use thumbnails for second look too
 
 bot.run(API_KEY)
+
+# Changelog :
+# !help command have been replaced with /help, and doesn't work anymore in private message, but the response will be visible only to you
+# Most commands are now working with slash command, just type "/" and let the autocompletion do his job, but the old way with "!" still works for some
+# The old commands don't have uppercase letter anymore, ex: !currentValue -> !current_value
+# The bot now notify you when you get HOFed
+# You can now use the `/connect` command without specifying someone, and if anybody accept, the game will start with them
+# Second look website images will now load faster, but message building on #second-look channel will take a bit longer
+# Bot will now make a "today's gallery" every day at 16:00 UTC (<t:1658332800:t>)
+# You can also use the bot to create a second look list now, by right-clicking the message in #share-your-shot, then going in the "Apps >" section and "Add to your second ..."
+# Then when you want to post it, use the "/post_second_look_list" command
+
+# TODO : before updating :
+# 1. update discord.py : pip install -U git+https://github.com/Rapptz/discord.py
+# 2. ask for a channel id for the "report to admin" cmd or use the channel used for saying when someone joined or left
+# 3. ask a mod to update bot's right using this link : https://discord.com/api/oauth2/authorize?client_id=873628046194778123&permissions=543582186560&scope=bot
+# 4. don't forget to !sync
