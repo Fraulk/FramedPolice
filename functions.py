@@ -322,6 +322,7 @@ async def secondLook(message):
     await bot.get_channel(SLChannel).send(f"Here is your link : https://second-look.netlify.app?id={authorId}")
     print("---------------------------------------- Building ended")
     ref.child(str(authorId)).set(userDict)
+    removeFilesInFolder("./secondLook")
 
 async def todaysGallery():
     userDict = {}
