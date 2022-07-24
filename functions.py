@@ -795,7 +795,9 @@ async def notifyHOFedUser(message):
     embed_author = message.embeds[0].author
     author = re.findall(r"Shot by (.*)", embed_author.name)[0]
     user = discord.utils.find(lambda m: str(m) == author, message.guild.members)
+    HOFAlertRole = discord.utils.get(message.guild.roles, id=1000790943294836757) # Test server: 1000794708475396176
     if user is not None:
+        if HOFAlertRole not in user.roles: return
         DMChannel = await user.create_dm()
         url_view = discord.ui.View()
         url_view.add_item(discord.ui.Button(label='Go to Message', style=discord.ButtonStyle.url, url=message.jump_url))

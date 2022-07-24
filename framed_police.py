@@ -479,13 +479,13 @@ async def getScore(ctx, *args):
             await ctx.send(reactList)
 
 # Test command for HOF notify
-# @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
-# @bot.command(name='embed')
-# async def embed(ctx, *args):
-#     e = FramedEmbed
-#     e.set_author(name="Shot by Fraulk#6318")
-#     channel = bot.get_channel(HOFChannel)
-#     await channel.send(embed=e)
+@commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
+@bot.command(name='embed')
+async def embed(ctx, *args):
+    e = FramedEmbed
+    e.set_author(name="Shot by Fraulk#6318")
+    channel = bot.get_channel(HOFChannel)
+    await channel.send(embed=e)
 
 # Test command for today's gallery, don't forget to hardcode the output channel id to something else than framed second look channel
 @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
