@@ -488,10 +488,10 @@ async def getScore(ctx, *args):
 #     await channel.send(embed=e)
 
 # Test command for today's gallery, don't forget to hardcode the output channel id to something else than framed second look channel
-@commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
-@bot.command(name='tg')
-async def tg(ctx):
-    await todaysGallery()
+# @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
+# @bot.command(name='tg')
+# async def tg(ctx):
+#     await todaysGallery()
 
 @bot.tree.command(description='Shows the list of commands the bot can execute. The bot\'s response will be visible only to you')
 async def help(interaction: discord.Interaction):
@@ -560,9 +560,9 @@ secs = delta_t.total_seconds()
 # FIXME : catch commands used without arguments
 # TODO : make the bot detect birthday on message
 # TODO : i should adapt the code for tiny pfp
-# TODO : Would actually help if we had an automated system of sorts, maybe adding a specific reaction on images you think are nice, and then the bot posts your link in the second look channel after a couple of days
-# TODO : make the bot detects on_reaction for sys and make a list of shots near the hof to print them in second look
-# TODO : use thumbnails for second look too
+# TODO : remove reactions limit for today's gallery
+# TODO : don't reset the past days gallery
+# TODO : don't take hoffed shot
 
 bot.run(API_KEY)
 
