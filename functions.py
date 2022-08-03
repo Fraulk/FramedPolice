@@ -335,13 +335,8 @@ async def todaysGallery():
     for msg in messages:
         # trying to get unique reactions needs some api calls, so instead i'm just counting how much reactions for each emojis and if one of them have more than 5, the message is taken
         # unfortunately, shots that has been posted right before the function is called won't likely make it, maybe it's not a good idea to ask for a minimum reactions count 
-        enough_reaction = False
-        for react in msg.reactions:
-            if react.count > 5:
-                enough_reaction = True
-                print("break")
-                break
-        if enough_reaction:
+        enough_reaction = False if await getShotReactions(msg) <= 28 else True
+        if not enough_reaction:
             raw_shot = requests.get(msg.attachments[0].url, stream=True).raw
             print(raw_shot)
             shot = Image.open(raw_shot)
@@ -360,9 +355,17 @@ async def todaysGallery():
             userDict[str(sent_message.id)] = tempDict
         print("next message")
     print("end")
-    ref.child(str(bot.user.id)).set(userDict)
-    # await bot.get_channel(889793521106714634).send(f"Today's gallery : https://second-look.netlify.app?id={bot.user.id}")
-    await bot.get_channel(SLChannel).send(f"Today's gallery : https://second-look.netlify.app?id={bot.user.id}")
+    botsData = ref.child(str(bot.user.id)).get()
+    global_len = len(botsData) + len(userDict)
+    # adds the current gallery shot count stored in firebase to the count of today's shot and if less, does nothing, else it removes the extra shots from the start of the dict (the oldest)
+    if global_len >= 1000:
+        for i in range(global_len - 1000):
+            botsData.pop(next(iter(botsData)))
+    botsData.update(userDict)
+    print(len(botsData))
+    ref.child(str(bot.user.id)).set(botsData)
+    # await bot.get_channel(889793521106714634).send(f"Today's gallery has been updated with today's shot : https://second-look.netlify.app?id={bot.user.id}")
+    await bot.get_channel(SLChannel).send(f"Today's gallery has been updated with today's shot : https://second-look.netlify.app?id={bot.user.id}")
     bot.dispatch("today_gallery_end")
     removeFilesInFolder("./todaysGallery")
     print("---------------------------------------- Building ended")
