@@ -337,7 +337,9 @@ async def todaysGallery():
         # unfortunately, shots that has been posted right before the function is called won't likely make it, maybe it's not a good idea to ask for a minimum reactions count 
         enough_reaction = False if await getShotReactions(msg) <= 28 else True
         if not enough_reaction:
-            raw_shot = requests.get(msg.attachments[0].url, stream=True).raw
+            try:
+                raw_shot = requests.get(msg.attachments[0].url, stream=True).raw
+            except: continue
             print(raw_shot)
             shot = Image.open(raw_shot)
             shot = shot.convert(mode="RGB")
