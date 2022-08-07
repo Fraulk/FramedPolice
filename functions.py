@@ -358,7 +358,11 @@ async def todaysGallery():
         print("next message")
     print("end")
     botsData = ref.child(str(bot.user.id)).get()
-    global_len = len(botsData) + len(userDict)
+    if botsData is not None:
+        global_len = len(botsData) + len(userDict)
+    else:
+        botsData = {}
+        global_len = len(userDict)
     # adds the current gallery shot count stored in firebase to the count of today's shot and if less, does nothing, else it removes the extra shots from the start of the dict (the oldest)
     if global_len >= 1000:
         for i in range(global_len - 1000):
