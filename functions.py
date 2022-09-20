@@ -333,9 +333,9 @@ async def todaysGallery():
     print("---------------------------------------- Building today's gallery")
     messages = [message async for message in SYSchannel.history(limit=200, after=day_ago)]
     for msg in messages:
-        # trying to get unique reactions needs some api calls, so instead i'm just counting how much reactions for each emojis and if one of them have more than 5, the message is taken
-        # unfortunately, shots that has been posted right before the function is called won't likely make it, maybe it's not a good idea to ask for a minimum reactions count 
-        enough_reaction = False if await getShotReactions(msg) <= 28 else True
+        try:
+            enough_reaction = False if await getShotReactions(msg) <= 28 else True
+        except: continue
         if not enough_reaction:
             try:
                 raw_shot = requests.get(msg.attachments[0].url, stream=True).raw
@@ -346,7 +346,9 @@ async def todaysGallery():
             print(shot)
             shot.save(f'todaysGallery/{msg.attachments[0].filename}.jpg', format="JPEG", quality=50)
             print("shot saved")
-            sent_message = await SLDchannel.send(file=discord.File(f'todaysGallery/{msg.attachments[0].filename}.jpg'))
+            try:
+                sent_message = await SLDchannel.send(file=discord.File(f'todaysGallery/{msg.attachments[0].filename}.jpg'))
+            except: continue
             print(sent_message)
             tempDict = {}
             tempDict['name'] = msg.author.name + "#" + msg.author.discriminator

@@ -488,10 +488,10 @@ async def getScore(ctx, *args):
 #     await channel.send(embed=e)
 
 # Test command for today's gallery, don't forget to hardcode the output channel id to something else than framed second look channel
-# @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
-# @bot.command(name='tg')
-# async def tg(ctx):
-#     await todaysGallery()
+@commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
+@bot.command(name='tg')
+async def tg(ctx):
+    await todaysGallery()
 
 @bot.tree.command(description='Shows the list of commands the bot can execute. The bot\'s response will be visible only to you')
 async def help(interaction: discord.Interaction):
