@@ -314,6 +314,7 @@ async def secondLook(message):
             print(sent_message)
             tempDict = {}
             tempDict['name'] = original_message.author.name + "#" + original_message.author.discriminator
+            tempDict['createdAt'] = original_message.created_at.timestamp()
             tempDict['imageUrl'] = sent_message.attachments[0].url
             tempDict['width'] = sent_message.attachments[0].width
             tempDict['height'] = sent_message.attachments[0].height
@@ -325,6 +326,7 @@ async def secondLook(message):
     removeFilesInFolder("./secondLook")
 
 async def todaysGallery():
+    bot.dispatch("today_gallery_end")
     userDict = {}
     day_ago = datetime.datetime.today() - datetime.timedelta(days=1)
     SYSchannel = bot.get_channel(SYSChannel)
@@ -352,6 +354,7 @@ async def todaysGallery():
             print(sent_message)
             tempDict = {}
             tempDict['name'] = msg.author.name + "#" + msg.author.discriminator
+            tempDict['createdAt'] = msg.created_at.timestamp()
             tempDict['imageUrl'] = sent_message.attachments[0].url
             tempDict['width'] = sent_message.attachments[0].width
             tempDict['height'] = sent_message.attachments[0].height
@@ -374,7 +377,6 @@ async def todaysGallery():
     ref.child(str(bot.user.id)).set(botsData)
     # await bot.get_channel(889793521106714634).send(f"Today's gallery has been updated with today's shot : https://second-look.netlify.app?id={bot.user.id}")
     await bot.get_channel(SLChannel).send(f"Today's gallery has been updated with today's shot : https://second-look.netlify.app?id={bot.user.id}")
-    bot.dispatch("today_gallery_end")
     removeFilesInFolder("./todaysGallery")
     print("---------------------------------------- Building ended")
 
