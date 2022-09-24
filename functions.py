@@ -359,7 +359,7 @@ async def todaysGallery():
             tempDict['width'] = sent_message.attachments[0].width
             tempDict['height'] = sent_message.attachments[0].height
             tempDict['messageUrl'] = msg.jump_url
-            userDict[str(sent_message.id)] = tempDict
+            userDict[str(msg.id)] = tempDict
         print("next message")
     print("end")
     botsData = ref.child(str(bot.user.id)).get()
