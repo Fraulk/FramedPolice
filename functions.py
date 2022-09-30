@@ -169,7 +169,9 @@ async def getCams(args):
             next_index = 1
             if line.find(',') > -1:
                 matched_lines += [line]
-            if(spreadData[line_index + next_index] == ''): next_index += 1
+            try:
+                if(spreadData[line_index + next_index] == ''): next_index += 1
+            except: pass
             while (line_index + next_index < len(spreadData) 
                     and spreadData[line_index + next_index].split(',')[0] == ''):
                 if spreadData[line_index + next_index].split(',')[1].startswith('http'):
