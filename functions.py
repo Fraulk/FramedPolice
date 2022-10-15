@@ -788,9 +788,9 @@ def toDiscordString(board: list, cursor: int, userId: int, player: int, customEm
     if not hasTied:
         formattedBoard += f'<@{userId}>\'s turn ' if not hasWon else f"<@{userId}> has won ! "
         if player == 1:
-            formattedBoard += "🔴" if customEmoji2 is None else customEmoji2
+            formattedBoard += "🟡" if customEmoji2 is None else customEmoji2
         else:
-            formattedBoard += "🟡" if customEmoji1 is None else customEmoji1
+            formattedBoard += "🔴" if customEmoji1 is None else customEmoji1
     else: formattedBoard += "It's a tie..."
     if hasWon: formattedBoard += f"\nReplay : https://connect4-replay.netlify.app/?data={'-'.join(map(str, replay))}"
     return formattedBoard
