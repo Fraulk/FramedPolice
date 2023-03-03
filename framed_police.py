@@ -96,6 +96,14 @@ async def on_member_remove(member):
     channel = bot.get_channel(LeftChannel)
     await channel.send(member.mention + " (" + member.name + ") has left the server")
 
+@bot.event
+async def on_reaction_add(reaction, user):
+    if reaction.message.channel.id != SYSChannel:
+        return
+    if reaction.emoji == "💬" or reaction.emoji == "🗨️":
+        if user.id != reaction.message.author.id:
+            await reaction.remove(user)
+
 # @bot.event
 # async def on_command_error(event_method, *args, **kwargs):
 #     print(event_method)
@@ -397,6 +405,7 @@ currentShot = None
 GVPChannel = None
 @bot.hybrid_command(name='gvp', help="Play GVP, aka Guess the Virtual Photographer")
 async def gvp(ctx):
+    if PROD == False: return
     global isGVPRunning
     global guessVpThread
     global currentShot
@@ -492,6 +501,15 @@ async def getScore(ctx, *args):
 @bot.command(name='tg')
 async def tg(ctx):
     await todaysGallery()
+
+# @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
+# @bot.command(name='getLastYearMessages')
+# async def getLastYearMessages(ctx):
+#     channel = bot.get_channel(HOFChannel)
+#     # print(datetime.datetime(2022, 1, 1, 0, 0, 0))
+#     # messages = [message async for message in channel.history(limit=None, after=datetime.datetime(2022, 1, 1, 0, 0, 0))]
+#     async for message in channel.history(limit=None, after=datetime.datetime(2022, 1, 1, 0, 0, 0)):
+#         print(message)
 
 @bot.tree.command(description='Shows the list of commands the bot can execute. The bot\'s response will be visible only to you')
 async def help(interaction: discord.Interaction):

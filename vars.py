@@ -359,7 +359,7 @@ shockedFrames = {
 framedleWords = [
     "photo", "skall", "berdu", "cheat", "putsos", "framed", "bot", "bingo", "bokeh", "ratio", "late",
     "reshade", "mods", "shot", "divorce", "crash", "retire", "late", "ratio", "drunk", "rick", "wordle",
-    "ign", "uuu", "lore", "moykeh"
+    "ign", "uuu", "lore", "moykeh", "horny", "retired", "sean"
 ]
 
 emojiLetters = "🇦🇧🇨🇩🇪🇫🇬🇭🇮🇯🇰🇱🇲🇳🇴🇵🇶🇷🇸🇹🇺🇻🇼🇽🇾🇿"
