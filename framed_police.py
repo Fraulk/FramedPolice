@@ -47,6 +47,8 @@ async def on_message(message):
         await loadImagesFromHOF(message.content, message.channel)
     elif isGVPRunning and guessVpThread != None and message.channel.id == guessVpThread.id:
         await checkGVPWinner(message, currentShot['author'])
+    elif message.channel.id == HOFunChannel:
+        await saveHOFun(message)
     else:
         return
 

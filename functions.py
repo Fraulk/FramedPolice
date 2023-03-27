@@ -819,6 +819,53 @@ async def notifyHOFedUser(message):
         await DMChannel.send(f"Hello {user.name}, your shot has been hoffed !", view=url_view)
     else: return
 
+async def saveHOFun(message):
+    # cdn.discordapp.com must be changed to to media.discordapp.net to use the discord default resize query params "?width=622&height=330"
+    # {
+    #   "gameName": message.content,
+    #   "shotUrl": "https://cdn.discordapp.com/attachments/549986930071175169/550298931620216843/9294681953_19fd912d36_o.png",
+    #   "height": 1079,
+    #   "width": 2590,
+    #   "thumbnailUrl": "https://media.discordapp.net/attachments/549986930071175169/550298931620216843/9294681953_19fd912d36_o.png?width=1295&height=538",
+    #   "author": "325964388844437504",
+    #   "date": "2019-02-27T12:51:29.487000",
+    #   "score": 11,
+    #   "ID": 1,
+    #   "epochTime": 1551282689,
+    #   "spoiler": false,
+    #   "colorName": "brown"
+    # }
+    if len(message.attachments) == 0:
+        return
+    currentHOFun = ref.child("hall-of-fun/_default").get()
+    # if i starts to 1 or 2, firebase does weird stuff, like ignoring the fact that it's a dict/object and transforms it into a list/array
+    i = 10 if currentHOFun is None else len(currentHOFun) + 10
+    userSubmissionDict = {}
+
+    for item in message.attachments:
+        userSubmissionDict[str(i)] = {}
+        userSubmissionDict[str(i)]["gameName"] = message.content
+        userSubmissionDict[str(i)]["shotUrl"] = item.url
+        userSubmissionDict[str(i)]["width"] = item.width
+        userSubmissionDict[str(i)]["height"] = item.height
+        userSubmissionDict[str(i)]["thumbnailUrl"] = f'{item.url.replace("cdn.discordapp.com", "media.discordapp.net")}?width={round(item.width / 2)}&height={round(item.height / 2)}'
+        userSubmissionDict[str(i)]["author"] = str(message.author.id)
+        userSubmissionDict[str(i)]["date"] = message.created_at.strftime('%Y-%m-%dT%H:%M:%S.%f')
+        userSubmissionDict[str(i)]["score"] = await getShotReactions(message)
+        userSubmissionDict[str(i)]["epochTime"] = int(message.created_at.timestamp())
+        userSubmissionDict[str(i)]["spoiler"] = item.is_spoiler()
+        userSubmissionDict[str(i)]["colorName"] = "black"
+        i += 1
+    
+    newHOFun = None
+    if currentHOFun is None:
+        newHOFun = {"_default": userSubmissionDict}
+        ref.child("hall-of-fun").set(newHOFun)
+    else:
+        newHOFun = currentHOFun
+        newHOFun.update(userSubmissionDict)
+        ref.child("hall-of-fun/_default").set(newHOFun)
+
 if os.path.isfile('./messages.pkl'):
     with open('messages.pkl', 'rb') as f:
         usersMessages = pickle.load(f)
