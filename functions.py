@@ -839,7 +839,7 @@ async def saveHOFun(message):
         return
     currentHOFun = ref.child("hall-of-fun/_default").get()
     # if i starts to 1 or 2, firebase does weird stuff, like ignoring the fact that it's a dict/object and transforms it into a list/array
-    i = 1 if currentHOFun is None else len(currentHOFun)
+    i = 1 if currentHOFun is None else len(currentHOFun) + 1
     userSubmissionDict = {}
 
     for item in message.attachments:
