@@ -840,22 +840,22 @@ async def saveHOFun(message):
         return
     currentHOFun = ref.child("hall-of-fun/_default").get()
     # if i starts to 1 or 2, firebase does weird stuff, like ignoring the fact that it's a dict/object and transforms it into a list/array
-    i = 10 if currentHOFun is None else len(currentHOFun) + 10
+    i = 1 if currentHOFun is None else len(currentHOFun) + 1
     userSubmissionDict = {}
 
     for item in message.attachments:
-        userSubmissionDict[str(i)] = {}
-        userSubmissionDict[str(i)]["gameName"] = message.content
-        userSubmissionDict[str(i)]["shotUrl"] = item.url
-        userSubmissionDict[str(i)]["width"] = item.width
-        userSubmissionDict[str(i)]["height"] = item.height
-        userSubmissionDict[str(i)]["thumbnailUrl"] = f'{item.url.replace("cdn.discordapp.com", "media.discordapp.net")}?width={round(item.width / 2)}&height={round(item.height / 2)}'
-        userSubmissionDict[str(i)]["author"] = str(message.author.id)
-        userSubmissionDict[str(i)]["date"] = message.created_at.strftime('%Y-%m-%dT%H:%M:%S.%f')
-        userSubmissionDict[str(i)]["score"] = await getShotReactions(message)
-        userSubmissionDict[str(i)]["epochTime"] = int(message.created_at.timestamp())
-        userSubmissionDict[str(i)]["spoiler"] = item.is_spoiler()
-        userSubmissionDict[str(i)]["colorName"] = "black"
+        userSubmissionDict["key-" + str(i)] = {}
+        userSubmissionDict["key-" + str(i)]["gameName"] = message.content
+        userSubmissionDict["key-" + str(i)]["shotUrl"] = item.url
+        userSubmissionDict["key-" + str(i)]["width"] = item.width
+        userSubmissionDict["key-" + str(i)]["height"] = item.height
+        userSubmissionDict["key-" + str(i)]["thumbnailUrl"] = f'{item.url.replace("cdn.discordapp.com", "media.discordapp.net")}?width={round(item.width / 2)}&height={round(item.height / 2)}'
+        userSubmissionDict["key-" + str(i)]["author"] = str(message.author.id)
+        userSubmissionDict["key-" + str(i)]["date"] = message.created_at.strftime('%Y-%m-%dT%H:%M:%S.%f')
+        userSubmissionDict["key-" + str(i)]["score"] = await getShotReactions(message)
+        userSubmissionDict["key-" + str(i)]["epochTime"] = int(message.created_at.timestamp())
+        userSubmissionDict["key-" + str(i)]["spoiler"] = item.is_spoiler()
+        userSubmissionDict["key-" + str(i)]["colorName"] = "black"
         i += 1
     
     newHOFun = None
