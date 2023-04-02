@@ -872,6 +872,7 @@ async def replaceTwitterLink(message):
     print("Links video url:", message.embeds[0].video.url)
     print("Is the user a bot:", message.author.bot)
     print("Condition for the bot to post the fixed link (should be true):", message.embeds[0].video.url is not None and message.author.bot is False)
+    print("Url:", message.jump_url)
     if message.embeds[0].video.url is not None and message.author.bot is False:
         e = message.embeds[0].url
         e = e.replace("twitter.com", "vxtwitter.com")
