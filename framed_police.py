@@ -47,6 +47,8 @@ async def on_message(message):
         await loadImagesFromHOF(message.content, message.channel)
     elif isGVPRunning and guessVpThread != None and message.channel.id == guessVpThread.id:
         await checkGVPWinner(message, currentShot['author'])
+    elif "https://twitter.com/" in message.content.lower():
+        await replaceTwitterLink(message)
     elif message.channel.id == HOFunChannel:
         await saveHOFun(message)
     else:
@@ -80,7 +82,7 @@ async def on_message_delete(message):
             # msgCreatedAt = datetime.datetime.timestamp(message.created_at)
             # if msgCreatedAt >= msg.time - (3600 * 2):   # msgCreatedAt is in UTC, but msg.time is in my timezone, so I remove 2 hours to get it to UTC, approximatively
             msg.count -= 1
-            print('---------------------------------------- Shots from '+ message.author.name + "#" + message.author.discriminator +' deleted')
+            print('---------------------------------------- Shots from ' + message.author.name + "#" + message.author.discriminator + ' deleted')
             await save()
             # else:
                 # print('---------------------------------------- Older shots from '+ message.author.name + "#" + message.author.discriminator +' deleted')

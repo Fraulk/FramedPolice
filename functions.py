@@ -7,6 +7,7 @@ import discord
 import datetime
 import shutil
 from discord.ext import commands
+from discord import Embed
 from discord.ext.commands import Bot
 import requests
 from PIL import Image, ImageDraw
@@ -865,6 +866,21 @@ async def saveHOFun(message):
         newHOFun = currentHOFun
         newHOFun.update(userSubmissionDict)
         ref.child("hall-of-fun/_default").set(newHOFun)
+
+async def replaceTwitterLink(message):
+    print("Twitter link containing video has been shared")
+    print("Links video url:", message.embeds[0].video.url)
+    print("Is the user a bot:", message.author.bot)
+    print("Condition for the bot to post the fixed link (should be true):", message.embeds[0].video.url is not None and message.author.bot is False)
+    if message.embeds[0].video.url is not None and message.author.bot is False:
+        e = message.embeds[0].url
+        e = e.replace("twitter.com", "vxtwitter.com")
+        await message.edit(suppress=True)
+        await message.reply(content=e, mention_author=False)
+    else:
+        print("The condition returned False")
+        print("Links video url:", message.embeds[0].video.url)
+        return
 
 if os.path.isfile('./messages.pkl'):
     with open('messages.pkl', 'rb') as f:
