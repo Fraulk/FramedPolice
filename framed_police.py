@@ -47,10 +47,10 @@ async def on_message(message):
         await loadImagesFromHOF(message.content, message.channel)
     elif isGVPRunning and guessVpThread != None and message.channel.id == guessVpThread.id:
         await checkGVPWinner(message, currentShot['author'])
-    elif "https://twitter.com/" in message.content.lower():
-        await replaceTwitterLink(message)
-    elif message.channel.id == HOFunChannel:
-        await saveHOFun(message)
+    # elif "https://twitter.com/" in message.content.lower():
+    #     await replaceTwitterLink(message)
+    # elif message.channel.id == HOFunChannel:
+    #     await saveHOFun(message)
     else:
         return
 
