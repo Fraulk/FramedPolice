@@ -517,4 +517,6 @@ colorNames = {
 	"yellowgreen": 0x9acd32
 }
 
-banned_emojis = ["🗨️", "💬", "<:kekhands:887379470917460020>", "<:laugh:550964044107087882>"]
+banned_unicode_emojis = ["🗨️", "💬"]
+banned_custom_emojis = [887379470917460020, 550964044107087882]
+# Laugh, kekhands
