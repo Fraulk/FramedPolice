@@ -6,13 +6,14 @@ import random
 import discord
 import datetime
 import shutil
-from discord.ext import commands
-from discord import Embed
-from discord.ext.commands import Bot
 import requests
+from discord import Embed
+from functools import lru_cache
+from discord.ext import commands
 from PIL import Image, ImageDraw
-from discord.ui import button, View, Button, view
+from discord.ext.commands import Bot
 from discord.interactions import Interaction
+from discord.ui import button, View, Button, view
 
 from vars import *
 
@@ -155,6 +156,7 @@ async def resetAllUsers():
         msg.reachedLimit = False
     await save()
 
+@lru_cache(maxsize=None)
 async def getCams(args):
     response = requests.get('https://docs.google.com/spreadsheet/ccc?key=1lnM2SM_RBzqile870zG70E39wuuseqQE0AaPW-P1p5E&output=csv')
     assert response.status_code == 200, 'Wrong status code'
@@ -197,6 +199,7 @@ async def getCams(args):
     gameNames[:] = ["**" + x + "**" for x in gameNames if x]
     return data, gameNames
 
+@lru_cache(maxsize=None)
 async def getUUU(args):
     args = ' '.join(args) if type(args) is tuple else args
     args = args.replace("'", "\\'")
@@ -222,6 +225,7 @@ async def getUUU(args):
             gameNames.append("**" + gameList[index] + "**")
     return data, gameNames
 
+@lru_cache(maxsize=None)
 async def getGuides(args):
     args = ' '.join(args) if type(args) is tuple else args
     args = args.replace("'", "\\'")
@@ -266,6 +270,7 @@ async def getGuides(args):
             gameNames.append("**" + guideNames[index] + "**")
     return data, gameNames
 
+@lru_cache(maxsize=None)
 async def getCheats(args):
     args = ' '.join(args) if type(args) is tuple else args
     # args = args.replace("'", "\\'")

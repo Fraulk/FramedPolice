@@ -1,5 +1,6 @@
-from typing import Optional
+from typing import Optional, List
 from discord import app_commands
+from functools import lru_cache
 
 from vars import *
 from functions import *
@@ -39,13 +40,35 @@ async def uuuAC(interaction: discord.Interaction, gamename: str):
     await interaction.response.send_message(content=data, embed=e, ephemeral=True) if len(data) < 2000 else await interaction.response.send_message("Search query is too vague, there are too many results to show", ephemeral=True)
 
 @bot.tree.command(name='guide', description='Checks if a game have a guide on the site. ex: !guide cyberpunk')
+# @app_commands.autocomplete(gamename=guide_autocomplete)
 @app_commands.describe(gamename='The name of the game')
-async def guideAC(interaction: discord.Interaction, gamename: str):
+@app_commands.describe(hidden='The bot reply will be hidden to everyone except you')
+# @app_commands.choices
+async def guideAC(interaction: discord.Interaction, gamename: str, hidden: bool = False):
     data, gameNames = await getGuides(gamename)
     if len(data) == 0: data = random.choice(notFound).format(gamename)
     e = FramedEmbed
     data = await over2000(data, gameNames, gamename)
-    await interaction.response.send_message(content=data, embed=e, ephemeral=True) if len(data) < 2000 else await interaction.response.send_message("Search query is too vague, there are too many results to show", ephemeral=True)
+    await interaction.response.send_message(content=data, embed=e, ephemeral=hidden) if len(data) < 2000 else await interaction.response.send_message("Search query is too vague, there are too many results to show", ephemeral=True)
+
+@bot.command(name='syncy', help='Sync slash commands')
+async def syncy(ctx) -> None:
+    ctx.bot.tree.clear_commands(guild=ctx.guild)
+    fmt = await ctx.bot.tree.sync(guild=ctx.guild)
+    await ctx.send(
+        f"Synced {len(fmt)} commands to the current guild."
+    )
+    return
+
+@guideAC.autocomplete("gamename")
+async def guide_autocomplete(interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
+    if (len(current) <= 3): return [app_commands.Choice(name="Please write more than 3 characters", value="")]
+    _, guideGameNames = await getGuides(current)
+    guideLinks = guideGameNames
+    return [
+        app_commands.Choice(name=guide.replace("**", ""), value=guide.replace("**", ""))
+        for guide in guideLinks if current.lower() in guide.lower()
+    ]
 
 @bot.tree.command(name='cheat', description='Checks if a game have cheat tables on the site. ex: !cheat alien')
 @app_commands.describe(gamename='The name of the game')
@@ -78,6 +101,24 @@ async def toolAC(interaction: discord.Interaction, gamename: str):
     e = FramedEmbed
     data = await over2000(data, camGameNames + uuuGameNames + guideGameNames + cheatGameNames, gamename)
     await interaction.response.send_message(content=data, embed=e, ephemeral=True) if len(data) < 2000 else await interaction.response.send_message("Search query is too vague, there are too many results to show", ephemeral=True) # + str(len(data))
+
+@lru_cache(maxsize=None)
+@toolAC.autocomplete("gamename")
+async def guide_autocomplete(interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
+    if (len(current) <= 3): return [app_commands.Choice(name="Please write more than 3 characters", value="")]
+    _, camGameNames = await getCams(current)
+    camGameNames = [gn.replace("**", "") + " -> Cam" for gn in camGameNames]
+    _, uuuGameNames = await getUUU(current)
+    uuuGameNames = [gn.replace("**", "") + " -> UUU" for gn in uuuGameNames]
+    _, guideGameNames = await getGuides(current)
+    guideGameNames = [gn.replace("**", "") + " -> Guide" for gn in guideGameNames]
+    _, cheatGameNames = await getCheats(current)
+    cheatGameNames = [gn.replace("**", "") + " -> Cheat table" for gn in cheatGameNames]
+    guideLinks = camGameNames + uuuGameNames + guideGameNames + cheatGameNames
+    return [
+        app_commands.Choice(name=guide, value=guide[:guide.rfind(" ->")])
+        for guide in guideLinks if current.lower() in guide.lower()
+    ]
 
 @bot.tree.command(name="bingo", description="Play to the framed bingo !")
 @commands.cooldown(1, 30, commands.BucketType.guild)
@@ -152,7 +193,7 @@ async def report_message(interaction: discord.Interaction, message: discord.Mess
 async def sync(ctx):
     guild = discord.Object(id=GUILD_ID)  # you can use a full discord.Guild as the method accepts a Snowflake
     bot.tree.copy_global_to(guild=guild)
-    await bot.tree.sync(guild=guild)
+    await bot.tree.sync()
 
 @bot.tree.context_menu(name='Add to your second look list')
 async def addSLList(interaction: discord.Interaction, message: discord.Message):
