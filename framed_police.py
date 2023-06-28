@@ -104,7 +104,6 @@ async def on_member_remove(member):
 async def on_reaction_add(reaction, user):
     if reaction.message.channel.id != SYSChannel:
         return
-    print(reaction.emoji)
     if (reaction.is_custom_emoji() and reaction.emoji.id in banned_custom_emojis) or (not reaction.is_custom_emoji() and reaction.emoji in banned_unicode_emojis):
         if user.id != reaction.message.author.id:
             await reaction.remove(user)
