@@ -21,6 +21,7 @@ async def on_ready():
     if not os.path.isfile('./tempBingo.png'):
         recreateBingo(emptyBingo)
     bot.dispatch("today_gallery")
+    bot.dispatch("new_day")
 
 @bot.event
 async def on_message(message):
@@ -563,6 +564,38 @@ async def on_today_gallery():
 async def on_today_gallery_end():
     await asyncio.sleep(datetime.timedelta(days=1).total_seconds())
     await todaysGallery()
+
+@bot.event
+async def on_new_day():
+    await checkBirthdayNames()
+    x = datetime.datetime.today()
+    y = x.replace(day=x.day, hour=0, minute=0, second=0, microsecond=0) + datetime.timedelta(days=1)
+    delta_t = y - x
+    secs = delta_t.total_seconds()
+    await asyncio.sleep(secs)
+    print("new day")
+    await checkBirthdayNames()
+
+@bot.event
+async def on_new_day_end():
+    await asyncio.sleep(datetime.timedelta(days=1).total_seconds())
+    await checkBirthdayNames()
+
+async def checkBirthdayNames():
+    for userId, birthday in birthDays.items():
+        aliveFor = datetime.datetime.now().timestamp() - birthday["birthday"].timestamp()
+        daysAlive = aliveFor / 60 / 60 / 24
+        aliveForText = birthday["template"].replace("{XXXX}", str(round(daysAlive)))
+        newName = f"{birthday['name']} {aliveForText}"
+        guild = bot.get_guild(GUILD_ID)
+        member = guild.get_member(userId)
+        if (len(newName) > 32):
+            DMChannel = await member.create_dm()
+            await DMChannel.send(f"The name cannot surpass 32 characters, please make the template shorter\nName: {birthday['name']} = {len(birthday['name'])} characters\nTemplate: {aliveForText} = {len(aliveForText)} characters\nTotal: {len(birthday['name']) + len(aliveForText)} + 1 space")
+            continue
+        print(f"Name: {birthday['name']} = {len(birthday['name'])} characters\nTemplate: {aliveForText} = {len(aliveForText)} characters\nTotal: {len(birthday['name']) + len(aliveForText)} + 1 space")
+        await member.edit(nick=newName) # needs "Manage nicknames" permission
+    bot.dispatch("new_day_end")
 
 # i should put this in a function and call it for the sleep and so i could just have one event function, but oh god i'm so lazy
 x = datetime.datetime.today()

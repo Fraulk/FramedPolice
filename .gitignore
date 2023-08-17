@@ -4,6 +4,7 @@ bingo.pkl
 titleAlts.pkl
 test.py
 secret.json
+secret.json.old
 temp.jpg
 tempBingo.png
 lastBingo.png
@@ -14,3 +15,4 @@ note.md
 secondLookList.pkl
 todaysGallery/
 secondLook/
+birthDays.pkl

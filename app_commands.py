@@ -1,5 +1,6 @@
 from typing import Optional
-from discord import app_commands
+from discord import app_commands, ui
+from discord.interactions import Interaction
 
 from vars import *
 from functions import *
@@ -193,6 +194,47 @@ async def postSLList(interaction: discord.Interaction):
 #     '0000000000000000': ["linksetc"]
 # }
 
+class birthDayModal(ui.Modal, title = "Enter your birthday"):
+    birthDay = ui.TextInput(label = "Enter your birthday in this format MM/DD/YYYY", style = discord.TextStyle.short, placeholder = "MM/DD/YYYY", required = True, max_length = 10)
+    currentName = ui.TextInput(label = "Enter your name", style = discord.TextStyle.short, required = True)
+    template = ui.TextInput(label = "Template to use", style = discord.TextStyle.short, placeholder = "(alive for {XXXX} days)", required = False)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        # this line should work, but doesn't, and that's the reason i now hate that f langage
+        # date = datetime.datetime.strptime("%m/%d/%Y", self.birthDay.value)
+        date = self.birthDay.value.split("/")
+        date = datetime.datetime(int(date[2]), int(date[0]), int(date[1]), 12)
+        aliveFor = datetime.datetime.now().timestamp() - date.timestamp()
+        daysAlive = aliveFor / 60 / 60 / 24
+        user = interaction.user
+        defaultTemplate = "(alive for {XXXX} days)"
+        template = self.template.value if self.template.value != "" else defaultTemplate
+        aliveForText = template.replace("{XXXX}", str(round(daysAlive)))
+        newName = f"{self.currentName} {aliveForText}"
+        if (len(newName) > 32):
+            return await interaction.response.send_message(content=f"The name cannot surpass 32 characters, please make the template shorter\nName: {self.currentName} = {len(self.currentName.value)} characters\nTemplate: {aliveForText} = {len(aliveForText)} characters\nTotal: {len(self.currentName.value) + len(aliveForText)} + 1 space", ephemeral=True)
+        await user.edit(nick=newName) # needs "Manage nicknames" permission
+        birthDays[user.id] = {
+            "birthday": date,
+            "template": template,
+            "name": self.currentName.value
+        }
+        await saveBirthdays()
+        print(f"Name: {self.currentName.value} = {len(self.currentName.value)} characters\nTemplate: {aliveForText} = {len(aliveForText)} characters\nTotal: {len(self.currentName.value) + len(aliveForText)} + 1 space")
+        return await interaction.response.send_message(content="Name successfully modified", ephemeral=True)
+
+@bot.tree.command(name="birthday_modal", description="Give the bot you birthday")
+async def birthdayModal(interaction: discord.Interaction):
+    await interaction.response.send_modal(birthDayModal())
+
+@bot.tree.command(name="birthday_remove", description="Remove yourself from the birthday list")
+async def birthdayModal(interaction: discord.Interaction):
+    if interaction.user.id in birthDays:
+        del birthDays[interaction.user.id]
+        await saveBirthdays()
+        return await interaction.response.send_message(content="Removed from the birthday list", ephemeral=True)
+    await interaction.response.send_message(content="Not in the list", ephemeral=True)
+
 async def saveSLList():
     with open('secondLookList.pkl', 'wb') as f:
         pickle.dump(secondLookList, f)
@@ -206,3 +248,17 @@ if os.path.isfile('./secondLookList.pkl'):
 else:
     secondLookList = {}
     with open('secondLookList.pkl', 'wb'): pass
+
+async def saveBirthdays():
+    with open('birthDays.pkl', 'wb') as f:
+        pickle.dump(birthDays, f)
+
+if os.path.isfile('./birthDays.pkl'):
+    with open('birthDays.pkl', 'rb') as f:
+        try:
+            birthDays = pickle.load(f)
+        except EOFError:
+            birthDays = {}
+else:
+    birthDays = {}
+    with open('birthDays.pkl', 'wb'): pass
