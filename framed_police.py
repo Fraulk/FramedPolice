@@ -428,7 +428,7 @@ async def gvp(ctx):
         print("gvp error")
         isGVPRunning = False
     currentAuthor = discord.utils.find(lambda m: m.id == int(currentShot['author']), ctx.guild.members)
-    print(currentAuthor.name, currentAuthor.display_name, currentAuthor.nick)
+    print(currentAuthor.name, currentAuthor.display_name, currentAuthor.nick, currentAuthor.global_name)
     print(currentShot['author'])
     e = discord.Embed(title="Guess the VP !",
                       description="Who's that ~~pokemon~~ VP !?",
