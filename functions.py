@@ -320,7 +320,6 @@ async def secondLook(message):
             tempDict['name'] = original_message.author.name
             tempDict['nickname'] = original_message.author.nick
             tempDict['displayName'] = original_message.author.display_name
-            tempDict['globalName'] = original_message.author.global_name
             tempDict['isSpoiler'] = original_message.attachments[0].is_spoiler()
             tempDict['createdAt'] = original_message.created_at.timestamp()
             tempDict['imageUrl'] = sent_message.attachments[0].url

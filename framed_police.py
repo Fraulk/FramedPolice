@@ -47,7 +47,7 @@ async def on_message(message):
     elif "https://framedsc.com/HallOfFramed/?" in message.content:
         await loadImagesFromHOF(message.content, message.channel)
     elif isGVPRunning and guessVpThread != None and message.channel.id == guessVpThread.id:
-        await checkGVPWinner(message, currentShot['author'])
+        await checkGVPWinner(message, currentAuthor)
     # elif "https://twitter.com/" in message.content.lower():
     #     await replaceTwitterLink(message)
     # elif message.channel.id == HOFunChannel:
@@ -407,6 +407,7 @@ async def framedle(ctx):
 guessVpThread = None
 isGVPRunning = False
 currentShot = None
+currentAuthor = None
 GVPChannel = None
 @bot.hybrid_command(name='gvp', help="Play GVP, aka Guess the Virtual Photographer")
 async def gvp(ctx):
@@ -414,6 +415,7 @@ async def gvp(ctx):
     global isGVPRunning
     global guessVpThread
     global currentShot
+    global currentAuthor
     global GVPChannel
     if isGVPRunning:
         await ctx.send(f"An instance of the game is already running here : <#{guessVpThread.id}>")
@@ -425,6 +427,8 @@ async def gvp(ctx):
     if type(currentShot) is not dict or type(currentShot['author']) is not str or type(currentShot['colorName']) is not str or type(currentShot['thumbnailUrl']) is not str:
         print("gvp error")
         isGVPRunning = False
+    currentAuthor = discord.utils.find(lambda m: m.id == int(currentShot['author']), ctx.guild.members)
+    print(currentAuthor.name, currentAuthor.display_name, currentAuthor.nick)
     print(currentShot['author'])
     e = discord.Embed(title="Guess the VP !",
                       description="Who's that ~~pokemon~~ VP !?",

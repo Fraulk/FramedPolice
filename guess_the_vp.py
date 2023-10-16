@@ -32,17 +32,19 @@ async def getHofShot(ctx):
     return shot
 
 message_count = 0
-async def checkGVPWinner(msg, authorId):
+async def checkGVPWinner(msg, author):
     global message_count
     message_count += 1
-    member = discord.utils.find(lambda m: compareNames(m, msg.content), msg.guild.members)
+    member = author
     if message_count == 20:
-        memberHint = discord.utils.find(lambda m: m.id == int(authorId), msg.guild.members)
-        await msg.channel.send(f"Hint: {memberHint.name[:1]}")
+        await msg.channel.send(f"Hint: {member.name[:1]}")
     if message_count == 35:
-        memberHint = discord.utils.find(lambda m: m.id == int(authorId), msg.guild.members)
-        await msg.channel.send(f"Hint: {memberHint.name[:2]}")
-    if member != None and member.id == int(authorId):
+        await msg.channel.send(f"Hint: {member.name[:2]}")
+    if member != None \
+      and member.name.lower() == msg.content.lower() \
+      or member.display_name.lower() == msg.content.lower() \
+      or member.global_name.lower() == msg.content.lower() \
+      or member.nick.lower() == msg.content.lower():
         message_count = 0
         bot.dispatch("guess_vp_winner", member, msg.author)
         print(msg.author.name + " found the VP, " + member.name)
