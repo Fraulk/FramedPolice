@@ -50,4 +50,7 @@ async def checkGVPWinner(msg, authorId):
 specialNames = {"Romаn": "Roman", "MAXPΞR": "MAXPER", "Catuṣkoṭi": "Catuskoti", "bohdan🇺🇦": "bohdan", "Loyd✦": "Loyd"}
 def compareNames(member, msgContent):
     if member.name in specialNames.keys() and msgContent.lower() == specialNames[member.name].lower(): return True
-    return member.name.lower() == msgContent.lower() or member.display_name.lower() == msgContent.lower()
+    return member.name.lower() == msgContent.lower() \
+        or member.display_name.lower() == msgContent.lower() \
+        or member.global_name.lower() == msgContent.lower() \
+        or member.nick.lower() == msgContent.lower()
