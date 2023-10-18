@@ -318,7 +318,7 @@ async def secondLook(message):
             tempDict = {}
             tempDict['id'] = f"{original_message.author.id}"
             tempDict['name'] = original_message.author.name
-            tempDict['nickname'] = original_message.author.nick
+            # tempDict['nickname'] = original_message.author.nick
             tempDict['displayName'] = original_message.author.display_name
             tempDict['globalName'] = original_message.author.global_name
             tempDict['isSpoiler'] = original_message.attachments[0].is_spoiler()
@@ -363,7 +363,7 @@ async def todaysGallery():
             tempDict = {}
             tempDict['id'] = f"{msg.author.id}"
             tempDict['name'] = msg.author.name
-            tempDict['nickname'] = msg.author.nick
+            # tempDict['nickname'] = msg.author.nick
             tempDict['displayName'] = msg.author.display_name
             tempDict['createdAt'] = msg.created_at.timestamp()
             tempDict['imageUrl'] = sent_message.attachments[0].url

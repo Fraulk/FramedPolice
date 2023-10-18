@@ -37,9 +37,9 @@ async def checkGVPWinner(msg, author):
     message_count += 1
     member = author
     if message_count == 20:
-        await msg.channel.send(f"Name: {member.name[:1]}\nDisplay name: {member.display_name[:1]}\nGlobal name: {member.global_name[:1]}\nNick: {member.nick[:1]}")
+        await msg.channel.send(f"Name: {member.name[:1]}\nDisplay name: {member.display_name[:1]}\nGlobal name: {member.global_name[:1]}\nNick: {member.nick[:1] if member.nick != None else 'None'}")
     if message_count == 35:
-        await msg.channel.send(f"Name: {member.name[:2]}\nDisplay name: {member.display_name[:2]}\nGlobal name: {member.global_name[:1]}\nNick: {member.nick[:1]}")
+        await msg.channel.send(f"Name: {member.name[:2]}\nDisplay name: {member.display_name[:2]}\nGlobal name: {member.global_name[:1]}\nNick: {member.nick[:1] if member.nick != None else 'None'}")
     if member != None \
       and member.name.lower() == msg.content.lower() \
       or member.display_name.lower() == msg.content.lower() \
