@@ -110,6 +110,15 @@ async def connect(interaction: discord.Interaction, opponent: discord.Member = N
     # Wait for the View to stop listening for input...
     await view.wait()
 
+@bot.tree.command(name="echo", description="Have fun jim")
+@app_commands.describe(text='The message to send', channel="The channel to send to")
+async def echo(interaction: discord.Interaction, text: str, channel: discord.TextChannel = None):
+    if channel is not None:
+        await channel.send(content=text)
+    else:
+        await interaction.channel.send(content=text)
+    await interaction.response.send_message(content="Message sent", ephemeral=True)
+
 # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 @bot.tree.context_menu(name="Show join date")
