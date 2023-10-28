@@ -110,6 +110,7 @@ async def connect(interaction: discord.Interaction, opponent: discord.Member = N
     # Wait for the View to stop listening for input...
     await view.wait()
 
+@app_commands.checks.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
 @bot.tree.command(name="echo", description="Have fun jim")
 @app_commands.describe(text='The message to send', channel="The channel to send to")
 async def echo(interaction: discord.Interaction, text: str, channel: discord.TextChannel = None):
