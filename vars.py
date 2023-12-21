@@ -520,3 +520,24 @@ colorNames = {
 banned_unicode_emojis = ["🗨️", "💬"]
 banned_custom_emojis = [887379470917460020, 550964044107087882]
 # Laugh, kekhands
+
+
+# The first element of the `trigger_words` list is linked to the first element of `trigger_response`, and so on.
+trigger_words = [
+    "test test",
+    "test",
+]
+
+trigger_responses = [
+
+"""
+# TEST
+**hello world**
+""",
+
+"""
+[TEST](https://framedsc.com/)
+new line
+""",
+
+]
