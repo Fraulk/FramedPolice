@@ -433,7 +433,7 @@ async def react(message, reason, botAvatar):
 
 async def loadImagesFromHOF(msg, channel):
     async with channel.typing():
-        epoch = re.findall(r"https:\/\/framedsc\.com\/HallOfFramed\/\?imageId=(\d*)", msg)
+        epoch = re.findall(r"https:\/\/framedsc\.com\/HallOfFramed\/.*imageId=(\d*)", msg)
         shotsDb = requests.get('https://raw.githubusercontent.com/originalnicodrgitbot/hall-of-framed-db/main/shotsdb.json')
         assert shotsDb.status_code == 200, 'Wrong status code'
         shotsDict = json.loads(shotsDb.content)
