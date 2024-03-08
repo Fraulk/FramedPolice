@@ -89,7 +89,7 @@ async def bingoAC(interaction: discord.Interaction):
 @app_commands.checks.has_role("Founders Edition")
 @bot.tree.command(name="change_bingo", description="Change the bingo image (change takes effect at the next round)")
 async def changeBingo(interaction: discord.Interaction, file: discord.Attachment):
-    if file.url[-3:] == "png":
+    if file.url.split(".")[-1][0:3] == "png":
         newBingoRaw = requests.get(file.url, stream=True).raw
         newBingo = Image.open(newBingoRaw)
         newBingo.save('images/bingo.png')
