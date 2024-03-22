@@ -120,6 +120,14 @@ async def echo(interaction: discord.Interaction, text: str, channel: discord.Tex
         await interaction.channel.send(content=text)
     await interaction.response.send_message(content="Message sent", ephemeral=True)
 
+@app_commands.checks.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
+@bot.tree.command(name="echo_dm", description="Have fun mods")
+@app_commands.describe(text='The message to send', member="The member to send to")
+async def echoDM(interaction: discord.Interaction, text: str, member: discord.Member):
+    DMChannel = await member.create_dm()
+    await DMChannel.send(content=text)
+    await interaction.response.send_message(content="Message sent", ephemeral=True)
+
 # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 @bot.tree.context_menu(name="Show join date")
