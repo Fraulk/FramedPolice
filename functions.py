@@ -353,38 +353,38 @@ async def todaysGallery():
         try:
             enough_reaction = False if await getShotReactions(msg) <= 28 else True
         except: continue
-        if not enough_reaction:
-            try:
-                raw_shot = requests.get(msg.attachments[0].url, stream=True).raw
-            except: continue
-            print(raw_shot)
-            shot = Image.open(raw_shot)
-            shot = shot.convert(mode="RGB")
-            print(shot)
-            shot.save(f'todaysGallery/{msg.attachments[0].filename}.jpg', format="JPEG", quality=50)
-            print("shot saved")
-            try:
-                sent_message = await SLDchannel.send(file=discord.File(f'todaysGallery/{msg.attachments[0].filename}.jpg'))
-            except: continue
-            shotPath = f'todaysGallery/{msg.attachments[0].filename}.jpg'
-            try:
-                blob = bucket.blob(shotPath)
-                blob.upload_from_filename(shotPath)
-                blob.make_public()
-                print(blob.public_url)
-            except: continue
-            print(sent_message)
-            tempDict = {}
-            tempDict['id'] = f"{msg.author.id}"
-            tempDict['name'] = msg.author.name
-            # tempDict['nickname'] = msg.author.nick
-            tempDict['displayName'] = msg.author.display_name
-            tempDict['createdAt'] = msg.created_at.timestamp()
-            tempDict['imageUrl'] = blob.public_url
-            tempDict['width'] = sent_message.attachments[0].width
-            tempDict['height'] = sent_message.attachments[0].height
-            tempDict['messageUrl'] = msg.jump_url
-            userDict[str(msg.id)] = tempDict
+        try:
+            raw_shot = requests.get(msg.attachments[0].url, stream=True).raw
+        except: continue
+        print(raw_shot)
+        shot = Image.open(raw_shot)
+        shot = shot.convert(mode="RGB")
+        print(shot)
+        shot.save(f'todaysGallery/{msg.attachments[0].filename}.jpg', format="JPEG", quality=50)
+        print("shot saved")
+        try:
+            sent_message = await SLDchannel.send(file=discord.File(f'todaysGallery/{msg.attachments[0].filename}.jpg'))
+        except: continue
+        shotPath = f'todaysGallery/{msg.attachments[0].filename}.jpg'
+        try:
+            blob = bucket.blob(shotPath)
+            blob.upload_from_filename(shotPath)
+            blob.make_public()
+            print(blob.public_url)
+        except: continue
+        print(sent_message)
+        tempDict = {}
+        tempDict['id'] = f"{msg.author.id}"
+        tempDict['name'] = msg.author.name
+        # tempDict['nickname'] = msg.author.nick
+        tempDict['displayName'] = msg.author.display_name
+        tempDict['createdAt'] = msg.created_at.timestamp()
+        tempDict['imageUrl'] = blob.public_url
+        tempDict['width'] = sent_message.attachments[0].width
+        tempDict['height'] = sent_message.attachments[0].height
+        tempDict['messageUrl'] = msg.jump_url
+        tempDict['isHoffed'] = enough_reaction
+        userDict[str(msg.id)] = tempDict
         print("next message")
     print("end")
     botsData = ref.child(str(bot.user.id)).get()
