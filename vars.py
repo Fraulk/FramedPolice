@@ -5,6 +5,7 @@ import firebase_admin
 from firebase_admin import db
 from dotenv import load_dotenv
 from discord.ext import commands
+from firebase_admin import storage
 from firebase_admin import credentials
 
 PROD = True
@@ -26,8 +27,13 @@ load_dotenv()
 API_KEY = os.getenv("API_KEY")
 DB_URL = os.getenv("DB_URL")
 cred = credentials.Certificate("./secret.json")
-SLapp = firebase_admin.initialize_app(cred, {'databaseURL': DB_URL})
+SLapp = firebase_admin.initialize_app(cred, {
+    'databaseURL': DB_URL,
+    'storageBucket': 'today-gallery.appspot.com'
+})
 ref = db.reference("/")
+bucket = storage.bucket()
+
 intents = discord.Intents.default()
 intents.members = True
 intents.message_content = True

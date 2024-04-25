@@ -283,6 +283,7 @@ async def tool(ctx, *args):
         if len(data) == 0: data = random.choice(notFound).format(' '.join(args))
         if random.randint(0, 100) <= 1:
             data += "\n**╘** : <https://discord.com/channels/549986543650078722/549986543650078725/802956969824092188>"
+            # https://discord.com/channels/549986543650078722/549986930071175169/562313767656882217 # > jim's
         e = FramedEmbed
         data = await over2000(data, camGameNames + uuuGameNames + guideGameNames + cheatGameNames, args)
     await ctx.send(content=data, embed=e) if len(data) < 2000 else await ctx.send("Search query is too vague, there are too many results to show") # + str(len(data))

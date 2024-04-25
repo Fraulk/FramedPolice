@@ -314,6 +314,13 @@ async def secondLook(message):
             shot.save(f'secondLook/{original_message.attachments[0].filename}.jpg', format="JPEG", quality=60)
             print("shot saved")
             sent_message = await SLDchannel.send(file=discord.File(f'secondLook/{original_message.attachments[0].filename}.jpg'))
+            shotPath = f'secondLook/{original_message.attachments[0].filename}.jpg'
+            try:
+                blob = bucket.blob(shotPath)
+                blob.upload_from_filename(shotPath)
+                blob.make_public()
+                print(blob.public_url)
+            except: continue
             print(sent_message)
             tempDict = {}
             tempDict['id'] = f"{original_message.author.id}"
@@ -323,7 +330,7 @@ async def secondLook(message):
             tempDict['globalName'] = original_message.author.global_name
             tempDict['isSpoiler'] = original_message.attachments[0].is_spoiler()
             tempDict['createdAt'] = original_message.created_at.timestamp()
-            tempDict['imageUrl'] = sent_message.attachments[0].url
+            tempDict['imageUrl'] = blob.public_url
             tempDict['width'] = sent_message.attachments[0].width
             tempDict['height'] = sent_message.attachments[0].height
             tempDict['messageUrl'] = link
@@ -359,6 +366,13 @@ async def todaysGallery():
             try:
                 sent_message = await SLDchannel.send(file=discord.File(f'todaysGallery/{msg.attachments[0].filename}.jpg'))
             except: continue
+            shotPath = f'todaysGallery/{msg.attachments[0].filename}.jpg'
+            try:
+                blob = bucket.blob(shotPath)
+                blob.upload_from_filename(shotPath)
+                blob.make_public()
+                print(blob.public_url)
+            except: continue
             print(sent_message)
             tempDict = {}
             tempDict['id'] = f"{msg.author.id}"
@@ -366,7 +380,7 @@ async def todaysGallery():
             # tempDict['nickname'] = msg.author.nick
             tempDict['displayName'] = msg.author.display_name
             tempDict['createdAt'] = msg.created_at.timestamp()
-            tempDict['imageUrl'] = sent_message.attachments[0].url
+            tempDict['imageUrl'] = blob.public_url
             tempDict['width'] = sent_message.attachments[0].width
             tempDict['height'] = sent_message.attachments[0].height
             tempDict['messageUrl'] = msg.jump_url
