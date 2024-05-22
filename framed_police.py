@@ -118,7 +118,7 @@ async def on_reaction_add(reaction, user):
 #     print(kwargs)
 
 @bot.event
-async def on_error(ctx, error):
+async def on_error(ctx, error, *args):
     if isinstance(error, discord.ext.commands.errors.MissingAnyRole):
         await ctx.send(f"Sorry but you can't use that command <@{ctx.author.id}>")
     if isinstance(error, discord.app_commands.errors.MissingRole):
