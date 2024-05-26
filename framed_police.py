@@ -504,7 +504,7 @@ async def getScore(ctx, *args):
 # @bot.command(name='embed')
 # async def embed(ctx, *args):
 #     e = FramedEmbed
-#     e.set_author(name="Shot by Fraulk#6318")
+#     e.set_author(name="Shot by fraulk")
 #     channel = bot.get_channel(HOFChannel)
 #     await channel.send(embed=e)
 
