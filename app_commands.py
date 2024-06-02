@@ -128,6 +128,30 @@ async def echoDM(interaction: discord.Interaction, text: str, member: discord.Me
     await DMChannel.send(content=text)
     await interaction.response.send_message(content="Message sent", ephemeral=True)
 
+@bot.tree.command(name="emoji_text", description="Send a text to the bot and get it rendered with emojis")
+@app_commands.describe(text="8 max w/o nitro and no custom emojis", emoji1="The emoji to write the text", emoji2="The emoji for the background")
+@app_commands.rename(emoji1="text_emoji", emoji2="background_emoji")
+async def connect(interaction: discord.Interaction, text: str, emoji1: str, emoji2: str = "<:air:927935249982300251>"):
+    result = []
+    splittedText = list(text.lower())
+    emojis = [emoji2, emoji1]
+    for _ in range(5):
+        row = ''
+        for j, lett in enumerate(splittedText):
+            letter = lett if lett != ' ' else 'space'
+            letterWidth = len(letters_dict[letter][0])
+            spacePos = letterWidth - 1
+            for k in range(letterWidth):
+                row += emojis[letters_dict[letter][_][k]]
+            if k == spacePos and j < len(splittedText) - 1:
+                row += emojis[0]
+        result.append(row)
+    emojified_message = '\n'.join(result)
+    if len(emojified_message) > 2000:
+        await interaction.response.send_message(content=f"The emoji length is a bit too long. Please try using a shorter one.\nYou can use a default emoji like ⬛ for the background to type more letters.\nWith one custom emoji, you can use 4-5 letters; without any custom emojis, about 8 letters.\nYour message is currently 2059 characters, but the max allowed is 2000. Thank you!", ephemeral=True)
+    else:
+        await interaction.response.send_message(content=emojified_message, ephemeral=True)
+
 # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 @bot.tree.context_menu(name="Show join date")
