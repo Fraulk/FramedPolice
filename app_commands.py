@@ -148,7 +148,7 @@ async def connect(interaction: discord.Interaction, text: str, emoji1: str, emoj
         result.append(row)
     emojified_message = '\n'.join(result)
     if len(emojified_message) > 2000:
-        await interaction.response.send_message(content=f"The emoji length is a bit too long. Please try using a shorter one.\nYou can use a default emoji like ⬛ for the background to type more letters.\nWith one custom emoji, you can use 4-5 letters; without any custom emojis, about 8 letters.\nYour message is currently 2059 characters, but the max allowed is 2000. Thank you!", ephemeral=True)
+        await interaction.response.send_message(content=f"The emoji length is a bit too long. Please try using a shorter one.\nYou can use a default emoji like ⬛ for the background to type more letters.\nWith one custom emoji, you can use 4-5 letters; without any custom emojis, about 8 letters.\nYour message is currently {len(emojified_message)} characters, but the max allowed is 2000. Thank you!", ephemeral=True)
     else:
         await interaction.response.send_message(content=emojified_message, ephemeral=True)
 
