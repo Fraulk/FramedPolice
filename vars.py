@@ -292,7 +292,7 @@ helpMsg = {
 
 FramedEmbed = discord.Embed(title="FRAMED. Screenshot Community",
                       url="https://framedsc.com/",
-                      description="© 2019-2022 FRAMED. All rights reserved. ",
+                      description="© 2019-2024 FRAMED. All rights reserved. ",
                       color=0x9a9a9a)
 FramedEmbed.set_thumbnail(url="https://cdn.discordapp.com/emojis/575642684006334464.png?size=128")
 
