@@ -311,10 +311,10 @@ async def secondLook(message):
             shot = Image.open(raw_shot)
             shot = shot.convert(mode="RGB")
             print(shot)
-            shot.save(f'secondLook/{original_message.attachments[0].filename}.jpg', format="JPEG", quality=60)
+            shot.save(f'secondLook/{original_message.author.name}-{original_message.created_at.timestamp()}.jpg', format="JPEG", quality=60)
             print("shot saved")
-            sent_message = await SLDchannel.send(file=discord.File(f'secondLook/{original_message.attachments[0].filename}.jpg'))
-            shotPath = f'secondLook/{original_message.attachments[0].filename}.jpg'
+            sent_message = await SLDchannel.send(file=discord.File(f'secondLook/{original_message.author.name}-{original_message.created_at.timestamp()}.jpg'))
+            shotPath = f'secondLook/{original_message.author.name}-{original_message.created_at.timestamp()}.jpg'
             try:
                 blob = bucket.blob(shotPath)
                 blob.upload_from_filename(shotPath)
@@ -360,12 +360,12 @@ async def todaysGallery():
         shot = Image.open(raw_shot)
         shot = shot.convert(mode="RGB")
         print(shot)
-        shot.save(f'todaysGallery/{msg.attachments[0].filename}.jpg', format="JPEG", quality=50)
+        shot.save(f'todaysGallery/{msg.author.name}-{msg.created_at.timestamp()}.jpg', format="JPEG", quality=50)
         print("shot saved")
         try:
-            sent_message = await SLDchannel.send(file=discord.File(f'todaysGallery/{msg.attachments[0].filename}.jpg'))
+            sent_message = await SLDchannel.send(file=discord.File(f'todaysGallery/{msg.author.name}-{msg.created_at.timestamp()}.jpg'))
         except: continue
-        shotPath = f'todaysGallery/{msg.attachments[0].filename}.jpg'
+        shotPath = f'todaysGallery/{msg.author.name}-{msg.created_at.timestamp()}.jpg'
         try:
             blob = bucket.blob(shotPath)
             blob.upload_from_filename(shotPath)
