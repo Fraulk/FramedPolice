@@ -335,7 +335,7 @@ async def secondLook(message):
             tempDict['height'] = sent_message.attachments[0].height
             tempDict['messageUrl'] = link
             userDict[str(original_message.id)] = tempDict
-    await bot.get_channel(SLChannel).send(f"Here is your link : https://second-look.netlify.app?id={authorId}")
+    await bot.get_channel(SLChannel).send(f"Here is your link : https://second-look.netlify.app/gallery/{authorId}")
     print("---------------------------------------- Building ended")
     ref.child(str(authorId)).set(userDict)
     removeFilesInFolder("./secondLook")
@@ -401,7 +401,7 @@ async def todaysGallery():
     print(len(botsData))
     ref.child(str(bot.user.id)).set(botsData)
     # await bot.get_channel(889793521106714634).send(f"Today's gallery has been updated with today's shot : https://second-look.netlify.app?id={bot.user.id}")
-    await bot.get_channel(SLChannel).send(f"Today's gallery has been updated with today's shot : https://second-look.netlify.app?id={bot.user.id}")
+    await bot.get_channel(SLChannel).send(f"Today's gallery has been updated with today's shot : https://second-look.netlify.app/gallery/todays-gallery")
     removeFilesInFolder("./todaysGallery")
     print("---------------------------------------- Building ended")
 
