@@ -907,13 +907,19 @@ async def replaceTwitterLink(message):
 
 if os.path.isfile('./messages.pkl'):
     with open('messages.pkl', 'rb') as f:
-        usersMessages = pickle.load(f)
+        try:
+            usersMessages = pickle.load(f)
+        except EOFError:
+            usersMessages = []
 else:
     with open('messages.pkl', 'wb'): pass
 
 if os.path.isfile('./bingo.pkl'):
     with open('bingo.pkl', 'rb') as f:
-        emptyBingo = pickle.load(f)
+        try:
+            bingoPoints = pickle.load(f)
+        except EOFError:
+            bingoPoints = []
 else:
     with open('bingo.pkl', 'wb'): pass
 
@@ -922,7 +928,10 @@ if not os.path.isfile('./tempBingo.png'):
 
 if os.path.isfile('./titleAlts.pkl'):
     with open('titleAlts.pkl', 'rb') as f:
-        titleAlts = pickle.load(f)
+        try:
+            titleAlts = pickle.load(f)
+        except EOFError:
+            titleAlts = []
 else:
     with open('titleAlts.pkl', 'wb'): pass
 
