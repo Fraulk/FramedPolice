@@ -170,25 +170,32 @@ async def joined(interaction: discord.Interaction, member: Optional[discord.Memb
 
 @bot.tree.context_menu(name='Report to admins')
 async def report_message(interaction: discord.Interaction, message: discord.Message):
-    # We're sending this response message with ephemeral=True, so only the command executor can see it
-    await interaction.response.send_message(
-        f'Thanks for reporting this message by {message.author.mention} to our moderators.', ephemeral=True
-    )
+    class ReportModal(discord.ui.Modal, title="Report Message"):
+        reason = discord.ui.TextInput(
+            label="Why are you reporting this message?",
+            style=discord.TextStyle.paragraph,
+            required=True,
+            max_length=500,
+            placeholder="Describe the issue for the mods"
+        )
 
-    # Handle report by sending it into a log channel
-    log_channel = interaction.guild.get_channel(ReportChannel)  # replace with your channel id
+        async def on_submit(self, modal_interaction: discord.Interaction):
+            await modal_interaction.response.send_message(
+                f"Thanks for reporting this message by {message.author.mention} to our moderators.", ephemeral=True
+            )
+            log_channel = interaction.guild.get_channel(ReportChannel)
+            embed = discord.Embed(title='Reported Message')
+            if message.content:
+                embed.description = message.content
+            embed.set_author(name=message.author.display_name, icon_url=message.author.display_avatar.url)
+            embed.timestamp = message.created_at
+            embed.add_field(name="Reporter", value=interaction.user.mention, inline=False)
+            embed.add_field(name="Reason for report", value=self.reason.value, inline=False)
+            url_view = discord.ui.View()
+            url_view.add_item(discord.ui.Button(label='Go to Message', style=discord.ButtonStyle.url, url=message.jump_url))
+            await log_channel.send(embed=embed, view=url_view)
 
-    embed = discord.Embed(title='Reported Message')
-    if message.content:
-        embed.description = message.content
-
-    embed.set_author(name=message.author.display_name, icon_url=message.author.display_avatar.url)
-    embed.timestamp = message.created_at
-
-    url_view = discord.ui.View()
-    url_view.add_item(discord.ui.Button(label='Go to Message', style=discord.ButtonStyle.url, url=message.jump_url))
-
-    await log_channel.send(embed=embed, view=url_view)
+    await interaction.response.send_modal(ReportModal())
 
 @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
 @bot.command(name='sync', help='Sync slash commands')
