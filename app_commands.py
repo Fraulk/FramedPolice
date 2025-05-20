@@ -57,8 +57,8 @@ async def cheatAC(interaction: discord.Interaction, gamename: str):
     data = await over2000(data, gameNames, gamename)
     await interaction.response.send_message(content=data, embed=e, ephemeral=True) if len(data) < 2000 else await interaction.response.send_message("Search query is too vague, there are too many results to show", ephemeral=True)
 
-@bot.tree.command(name='tool', description='Checks if a game have a guide, cam or works with UUU. ex: !tool cyberpunk')
-@app_commands.describe(gamename='The name of the game')
+# @bot.tree.command(name='tool', description='Checks if a game have a guide, cam or works with UUU. ex: !tool cyberpunk')
+# @app_commands.describe(gamename='The name of the game')
 async def toolAC(interaction: discord.Interaction, gamename: str):
     cams, camGameNames = await getCams(gamename)
     uuus, uuuGameNames = await getUUU(gamename)
@@ -194,8 +194,23 @@ async def report_message(interaction: discord.Interaction, message: discord.Mess
 @bot.command(name='sync', help='Sync slash commands')
 async def sync(ctx):
     guild = discord.Object(id=GUILD_ID)  # you can use a full discord.Guild as the method accepts a Snowflake
-    bot.tree.copy_global_to(guild=guild)
-    await bot.tree.sync(guild=guild)
+    # print(bot.tree.get_commands(type=discord.AppCommandType.message))
+    # bot.tree.remove_command('Report to admins', type=discord.AppCommandType.message)
+    # bot.tree.remove_command('Add to your second look list', type=discord.AppCommandType.message)
+    # bot.tree.clear_commands(type=discord.AppCommandType.message, guild=guild)
+    # bot.tree.clear_commands(type=discord.AppCommandType.message, guild=None)
+    # bot.tree.copy_global_to(guild=guild)
+    # print(await bot.tree.fetch_commands(guild=guild))
+    # await bot.tree.sync(guild=guild)
+    cmd = app_commands.Command(
+        name="tool",
+        description="Checks if a game has a guide, cam or works with UUU.",
+        callback=toolAC,
+    )
+    cmd.type = 4
+    cmd.handler = 2
+    bot.tree.add_command(cmd)
+    await bot.tree.sync()
 
 @bot.tree.context_menu(name='Add to your second look list')
 async def addSLList(interaction: discord.Interaction, message: discord.Message):
