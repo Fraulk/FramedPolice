@@ -170,6 +170,7 @@ async def joined(interaction: discord.Interaction, member: Optional[discord.Memb
 
 @bot.tree.context_menu(name='Report to admins')
 async def report_message(interaction: discord.Interaction, message: discord.Message):
+    
     class ReportModal(discord.ui.Modal, title="Report Message"):
         reason = discord.ui.TextInput(
             label="Why are you reporting this message?",
@@ -178,35 +179,50 @@ async def report_message(interaction: discord.Interaction, message: discord.Mess
             max_length=500,
             placeholder="Describe the issue for the mods"
         )
-        anonymous = discord.ui.Select(
+
+        def __init__(self):
+            super().__init__()
+
+        async def on_submit(self, modal_interaction: discord.Interaction):
+            await modal_interaction.response.send_message(
+                "Do you want to send this report anonymously?",
+                ephemeral=True,
+                view=AnonymousChoiceView(reason=self.reason.value)
+            )
+
+    class AnonymousChoiceView(discord.ui.View):
+        def __init__(self, reason):
+            super().__init__(timeout=60)
+            self.reason = reason
+
+        @discord.ui.select(
             placeholder="Send anonymously?",
             min_values=1,
             max_values=1,
             options=[
                 discord.SelectOption(label="Yes", value="yes", description="Send this report anonymously"),
-                discord.SelectOption(label="No", value="no", description="Include your username in the report"),
+                discord.SelectOption(label="No", value="no", description="Include your username in the report")
             ]
         )
-
-        async def on_submit(self, modal_interaction: discord.Interaction):
-            send_anon = self.anonymous.values[0] == "yes"
-            await modal_interaction.response.send_message(
-                f"Thanks for reporting this message by {message.author.mention} to our moderators.", ephemeral=True
-            )
+        async def select_callback(self, interaction: discord.Interaction, select: discord.ui.Select):
+            send_anon = select.values[0] == "yes"
             log_channel = interaction.guild.get_channel(ReportChannel)
             embed = discord.Embed(title='Reported Message')
+
             if message.content:
                 embed.description = message.content
             embed.set_author(name=message.author.display_name, icon_url=message.author.display_avatar.url)
             embed.timestamp = message.created_at
-            if send_anon:
-                embed.add_field(name="Reporter", value="Anonymous", inline=False)
-            else:
-                embed.add_field(name="Reporter", value=interaction.user.mention, inline=False)
-            embed.add_field(name="Reason for report", value=self.reason.value, inline=False)
+
+            reporter_field = "Anonymous" if send_anon else interaction.user.mention
+            embed.add_field(name="Reporter", value=reporter_field, inline=False)
+            embed.add_field(name="Reason for report", value=self.reason, inline=False)
+
             url_view = discord.ui.View()
             url_view.add_item(discord.ui.Button(label='Go to Message', style=discord.ButtonStyle.url, url=message.jump_url))
+
             await log_channel.send(embed=embed, view=url_view)
+            await interaction.response.edit_message(content="Report sent to moderators. Thank you!", view=None)
 
     await interaction.response.send_modal(ReportModal())
 
