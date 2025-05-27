@@ -227,8 +227,8 @@ async def report_message(interaction: discord.Interaction, message: discord.Mess
     await interaction.response.send_modal(ReportModal())
 
 @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
-@bot.command(name='syncy', help='Syncy slash commands')
-async def syncy(ctx):
+@bot.command(name='sync', help='Sync slash commands')
+async def sync(ctx):
     guild = discord.Object(id=GUILD_ID)  # you can use a full discord.Guild as the method accepts a Snowflake
     # print(bot.tree.get_commands(type=discord.AppCommandType.message))
     # bot.tree.remove_command('Report to admins', type=discord.AppCommandType.message)
