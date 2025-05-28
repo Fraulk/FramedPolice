@@ -8,7 +8,9 @@ from discord.ext import commands
 from firebase_admin import storage
 from firebase_admin import credentials
 
-PROD = True
+load_dotenv()
+
+PROD = False if os.getenv("ENV") == "dev" else True
 WelcomeRole     = 873297069715099721 if PROD else 898969812254990367
 PadawanRole     = 872825204869582869 if PROD else 899266723906220042
 HOFAlertRole    = 1000790943294836757 if PROD else 1000794708475396176
@@ -24,7 +26,6 @@ HOFunChannel    = 1090729949448642641 if PROD else 1089893884047405086
 SLDump = 997872439973400586
 GUILD_ID = 549986543650078722 if PROD else 873627093840314398
 
-load_dotenv()
 API_KEY = os.getenv("API_KEY")
 DB_URL = os.getenv("DB_URL")
 cred = credentials.Certificate("./secret.json")
