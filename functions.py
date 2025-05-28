@@ -72,9 +72,12 @@ async def checkMessage(message):
             print("Current Time:", endTime)
             if time.time() <= endTime:
                 if msg.count >= LIMIT:
-                    print("Deleted")
-                    await DMChannel.send(f"Sorry but you can't post more than **{LIMIT}** shots per day.\nThe next time you can post is **<t:{round(endTime)}:F>** so in **{datetime.timedelta(seconds=round(remainingTime))}**")
+                    print("Deleted by the bot")
                     await message.delete()
+                    try:
+                        await DMChannel.send(f"Sorry but you can't post more than **{LIMIT}** shots per day.\nThe next time you can post is **<t:{round(endTime)}:F>** so in **{datetime.timedelta(seconds=round(remainingTime))}**")
+                    except:
+                        print("DM failed, probably blocked by the user")
             else:
                 msg.time = time.time()
                 msg.count = 0
