@@ -233,11 +233,10 @@ async def sync(ctx):
     # print(bot.tree.get_commands(type=discord.AppCommandType.message))
     # bot.tree.remove_command('Report to admins', type=discord.AppCommandType.message)
     # bot.tree.remove_command('Add to your second look list', type=discord.AppCommandType.message)
-    # bot.tree.clear_commands(type=discord.AppCommandType.message, guild=guild)
+    bot.tree.clear_commands(type=discord.AppCommandType.message, guild=guild)
     # bot.tree.clear_commands(type=discord.AppCommandType.message, guild=None)
     # bot.tree.copy_global_to(guild=guild)
     # print(await bot.tree.fetch_commands(guild=guild))
-    # await bot.tree.sync(guild=guild)
     cmd = app_commands.Command(
         name="tool",
         description="Checks if a game has a guide, cam or works with UUU.",
@@ -246,6 +245,7 @@ async def sync(ctx):
     cmd.type = 4
     cmd.handler = 2
     bot.tree.add_command(cmd)
+    await bot.tree.sync(guild=guild)
     await bot.tree.sync()
 
 @bot.tree.context_menu(name='Add to your second look list')
