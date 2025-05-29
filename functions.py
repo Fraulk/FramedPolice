@@ -412,8 +412,15 @@ async def startThread(message):
     title = f"Hello There, {message.author.name}"
     thread = await message.channel.create_thread(name=title, message=message, reason="Thread created for new member")
     await thread.send("https://tenor.com/view/hello-there-general-kenobi-gif-18841535")
-    await message.author.remove_roles(message.author.guild.get_role(WelcomeRole))
-    await message.author.add_roles(message.author.guild.get_role(PadawanRole))
+    member = message.guild.get_member(message.author.id)
+    if member is None:
+        member = await message.guild.fetch_member(message.author.id)
+
+    try:
+        await member.remove_roles(message.guild.get_role(WelcomeRole))
+        await member.add_roles(message.guild.get_role(PadawanRole))
+    except Exception as e:
+        print(f"[ERROR] Failed to modify roles: {e}")
 
 async def over2000(data, gameNames, query):
     isOver2000 = len(data) > 2000
