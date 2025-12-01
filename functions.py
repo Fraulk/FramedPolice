@@ -5,6 +5,7 @@ import pickle
 import random
 import discord
 import datetime
+import asyncio
 import shutil
 from discord.ext import commands
 from discord import Embed
@@ -417,8 +418,22 @@ async def startThread(message):
         member = await message.guild.fetch_member(message.author.id)
 
     try:
-        await member.remove_roles(message.guild.get_role(WelcomeRole))
-        await member.add_roles(message.guild.get_role(PadawanRole))
+        welcome_role = message.guild.get_role(WelcomeRole)
+        padawan_role = message.guild.get_role(PadawanRole)
+        
+        if welcome_role is None:
+            print(f"[ERROR] Welcome role {WelcomeRole} not found in guild!")
+        else:
+            await member.remove_roles(welcome_role)
+            print(f"Removed Welcome role from {member.name}")
+        
+        await asyncio.sleep(0.5)  # Small delay?
+        
+        if padawan_role is None:
+            print(f"[ERROR] Padawan role {PadawanRole} not found in guild!")
+        else:
+            await member.add_roles(padawan_role)
+            print(f"Added Padawan role to {member.name}")
     except Exception as e:
         print(f"[ERROR] Failed to modify roles: {e}")
 
