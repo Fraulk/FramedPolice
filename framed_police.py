@@ -10,6 +10,7 @@ from app_commands import *
 from functions import *
 from wordle import *
 from guess_the_vp import *
+from logger import LogBuffer, set_log_buffer, log_info
 
 # pip install -U git+https://github.com/Rapptz/discord.py
 
@@ -18,6 +19,14 @@ from guess_the_vp import *
 @bot.event
 async def on_ready():
     print(f"{bot.user} logged in")
+    
+    # Init the logger
+    log_buffer = LogBuffer(bot)
+    set_log_buffer(log_buffer)
+    asyncio.create_task(log_buffer.start_flusher())
+    print("[LOGGER] Log buffer up and running")
+    await log_info("Bot is ready")
+    
     if not os.path.isfile('./tempBingo.png'):
         recreateBingo(emptyBingo)
     bot.dispatch("today_gallery")
@@ -500,13 +509,15 @@ async def getScore(ctx, *args):
             await ctx.send(reactList)
 
 # Test command for HOF notify
-# @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
-# @bot.command(name='embed')
-# async def embed(ctx, *args):
-#     e = FramedEmbed
-#     e.set_author(name="Shot by fraulk")
-#     channel = bot.get_channel(HOFChannel)
-#     await channel.send(embed=e)
+# @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604, 1445054368989581465)
+# @bot.command(name='testhof')
+# async def testhof(ctx, *args):
+#    e = FramedEmbed.copy()
+#    username = ' '.join(args) if args else ctx.author.name
+#    e.set_author(name=f"Shot by {username}")
+#    channel = bot.get_channel(HOFChannel)
+#    await channel.send(embed=e)
+#    await ctx.send(f"Posted HOF test embed for {username}")
 
 # Test command for today's gallery, don't forget to hardcode the output channel id to something else than framed second look channel
 @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
