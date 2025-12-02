@@ -9,6 +9,7 @@ import asyncio
 import shutil
 from discord.ext import commands
 from discord import Embed
+from logger import log_to_hof, log_error, log_info
 from discord.ext.commands import Bot
 import requests
 from PIL import Image, ImageDraw
@@ -303,7 +304,7 @@ async def secondLook(message):
         authorName = message.mentions[0].name + "#" + message.mentions[0].discriminator
         authorId = message.mentions[0].id
     userDict = {}
-    links = re.findall("(https:\/\/discord.com\/channels\/.*\/.*\d)(?:| )", message.content)
+    links = re.findall(r"(https://discord\.com/channels/.*/.*/\d)(?:| )", message.content)
     if len(links) <= 3: return
     print("---------------------------------------- Building second-look message for " + authorName)
     async with message.channel.typing():
@@ -355,7 +356,7 @@ async def todaysGallery():
     messages = [message async for message in SYSchannel.history(limit=200, after=day_ago)]
     for msg in messages:
         try:
-            enough_reaction = False if await getShotReactions(msg) <= 28 else True
+            enough_reaction = False if await getShotReactions(msg) <= 28 else True  # TODO: Change back to 28 for production
         except: continue
         try:
             raw_shot = requests.get(msg.attachments[0].url, stream=True).raw
@@ -418,24 +419,24 @@ async def startThread(message):
         member = await message.guild.fetch_member(message.author.id)
 
     try:
-        welcome_role = message.guild.get_role(WelcomeRole)
-        padawan_role = message.guild.get_role(PadawanRole)
+        welcome_role = discord.utils.get(member.guild.roles, id=WelcomeRole)
+        padawan_role = discord.utils.get(member.guild.roles, id=PadawanRole)
         
         if welcome_role is None:
-            print(f"[ERROR] Welcome role {WelcomeRole} not found in guild!")
+            await log_error(f"Welcome role not found: {WelcomeRole}")
         else:
             await member.remove_roles(welcome_role)
-            print(f"Removed Welcome role from {member.name}")
+            await log_info(f"Removed Welcome role from {member.name}")
         
-        await asyncio.sleep(0.5)  # Small delay?
+        await asyncio.sleep(0.5)
         
         if padawan_role is None:
-            print(f"[ERROR] Padawan role {PadawanRole} not found in guild!")
+            await log_error(f"Padawan role not found: {PadawanRole}")
         else:
             await member.add_roles(padawan_role)
-            print(f"Added Padawan role to {member.name}")
+            await log_info(f"Added Padawan role to {member.name}")
     except Exception as e:
-        print(f"[ERROR] Failed to modify roles: {e}")
+        await log_error(f"Failed to modify roles for {member.name}: {e}")
 
 async def over2000(data, gameNames, query):
     isOver2000 = len(data) > 2000
@@ -855,17 +856,70 @@ async def getShotReactions(message) -> int:
     return len(users)
 
 async def notifyHOFedUser(message):
-    embed_author = message.embeds[0].author
-    author = re.findall(r"Shot by (.*)", embed_author.name)[0]
-    user = discord.utils.find(lambda m: str(m) == author, message.guild.members)
-    HOFAlertRoleObject = discord.utils.get(message.guild.roles, id=HOFAlertRole) # Test server: 1000794708475396176
-    if user is not None:
-        if HOFAlertRoleObject not in user.roles: return
-        DMChannel = await user.create_dm()
-        url_view = discord.ui.View()
-        url_view.add_item(discord.ui.Button(label='Go to Message', style=discord.ButtonStyle.url, url=message.jump_url))
-        await DMChannel.send(f"Hello {user.name}, your shot has been hoffed !", view=url_view)
-    else: return
+    try:
+        # Check if message has embeds
+        if not message.embeds or len(message.embeds) == 0:
+            await log_info("No embeds, skipping")
+            return
+        
+        embed_author = message.embeds[0].author
+        if embed_author is None or embed_author.name is None:
+            await log_info("No author in embed, skipping")
+            return
+        
+        # Extract username from "Shot by username" format
+        author_match = re.findall(r"Shot by (.*)", embed_author.name)
+        if not author_match:
+            await log_error(f"Can't parse author from: {embed_author.name}")
+            return
+        author = author_match[0]
+        await log_to_hof(f"Looking up user: {author}")
+        
+        # Try different ways to find the user
+        user = discord.utils.find(lambda m: str(m) == author, message.guild.members)
+        if user is None:
+            user = discord.utils.find(lambda m: m.name == author, message.guild.members)
+        if user is None:
+            user = discord.utils.find(lambda m: m.display_name == author, message.guild.members)
+        if user is None:
+            user = discord.utils.find(lambda m: author in str(m) or author in m.name, message.guild.members)
+        
+        if user is None:
+            await log_error(f"User not found: {author}")
+            return
+        
+        await log_to_hof(f"Found user: {user.name} ({user.id})")
+        
+        # Check if user has HOF alert role
+        HOFAlertRoleObject = discord.utils.get(message.guild.roles, id=HOFAlertRole)
+        if HOFAlertRoleObject is None:
+            await log_error(f"HOF alert role not found: {HOFAlertRole}")
+            return
+        
+        if HOFAlertRoleObject not in user.roles:
+            await log_info(f"{user.name} doesn't have HOF alert role")
+            return
+        
+        try:
+            DMChannel = await user.create_dm()
+        except discord.Forbidden:
+            await log_error(f"Can't DM {user.name} - privacy blocked")
+            return
+        except Exception as e:
+            await log_error(f"Can't create DM for {user.name}: {e}")
+            return
+        
+        try:
+            url_view = discord.ui.View()
+            url_view.add_item(discord.ui.Button(label='Go to Message', style=discord.ButtonStyle.url, url=message.jump_url))
+            await DMChannel.send(f"Yo {user.name}, your shot got hoffed!", view=url_view)
+            await log_to_hof(f"Sent DM to {user.name}")
+        except discord.Forbidden:
+            await log_error(f"No perms to DM {user.name}")
+        except Exception as e:
+            await log_error(f"Failed to DM {user.name}: {e}")
+    except Exception as e:
+        await log_error(f"notifyHOFedUser crashed: {e}")
 
 async def saveHOFun(message):
     # cdn.discordapp.com must be changed to to media.discordapp.net to use the discord default resize query params "?width=622&height=330"
