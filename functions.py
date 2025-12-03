@@ -38,10 +38,11 @@ class UserMessage:
 
 async def checkMessage(message):
     if (message.author.bot):
-        print("bot message ignored")
+        await log_info("bot message ignored")
         return
     userId = message.author.id
-    print(message.created_at)
+    # Debug: incoming message timestamp
+    await log_info(str(message.created_at))
     embeds = message.embeds
     attachmentCount = message.attachments
     DMChannel = await message.author.create_dm()
@@ -60,37 +61,46 @@ async def checkMessage(message):
         await message.delete()
         return
     if len(attachmentCount) == 0 and len(embeds) == 0:
-        print('ignored')
+        await log_info('ignored')
         return
     #     await DMChannel.send(f"Please do not talk in this channel.")
     #     await message.delete()
-    print("Attachment count:", len(attachmentCount))
-    print("Embeds count:", len(embeds))
+    await log_info(f"Attachment count: {len(attachmentCount)}")
+    await log_info(f"Embeds count: {len(embeds)}")
     for msg in usersMessages:
         if msg.id == userId:
             endTime = msg.time + DELAY
             remainingTime = DELAY - (time.time() - msg.time)
-            if msg.count == LIMIT - 1: msg.reachedLimit = True
-            print("Current Time:", endTime)
+            # Mark when next post reaches the limit
+            if msg.count == LIMIT - 1:
+                msg.reachedLimit = True
+            await log_info(f"Window ends at: {endTime}")
             if time.time() <= endTime:
-                if msg.count >= LIMIT:
-                    print("Deleted by the bot")
+                # Compute would-be count for this incoming message
+                new_count = msg.count + 1
+                if new_count > LIMIT:
+                    await log_info("Deleted by the bot (limit exceeded)")
                     await message.delete()
                     try:
-                        await DMChannel.send(f"Sorry but you can't post more than **{LIMIT}** shots per day.\nThe next time you can post is **<t:{round(endTime)}:F>** so in **{datetime.timedelta(seconds=round(remainingTime))}**")
-                    except:
-                        print("DM failed, probably blocked by the user")
+                        await DMChannel.send(
+                            f"Sorry, you can't post more than **{LIMIT}** shots per window.\n"
+                            f"You can post again at **<t:{round(endTime)}:F>** (in **{datetime.timedelta(seconds=round(remainingTime))}**)."
+                        )
+                    except Exception:
+                        await log_error("DM failed, probably blocked by the user")
+                    return
+                else:
+                    msg.count = new_count
             else:
                 msg.time = time.time()
-                msg.count = 0
+                msg.count = 1
                 msg.reachedLimit = False
-            msg.count += 1
-            print(
-                f"UserId:{msg.id} Time of first message: {msg.time} Number of messages: {msg.count} By: {msg.name}\n---------------------------------------------------------------------------------------------------------------"
+            await log_info(
+                f"UserId:{msg.id} first:{msg.time} count:{msg.count} by:{msg.name}"
             )
             return
     usersMessages.append(UserMessage(userId, message.author.name + "#" + message.author.discriminator, time.time(), 1, False))
-    print(f"UserId:{userId} Time of first message: {time.time()} Number of messages: {1} By: {message.author.name}#{message.author.discriminator}\n---------------------------------------------------------------------------------------------------------------")
+    await log_info(f"UserId:{userId} first:{time.time()} count:1 by:{message.author.name}#{message.author.discriminator}")
 
 async def save():
     with open('messages.pkl', 'wb') as f:
