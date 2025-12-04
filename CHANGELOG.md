@@ -1,3 +1,7 @@
+## 2025-12-04
+
+- Fix: sixth shot is now reliably deleted and counter no longer drifts (bot-marked deletes are ignored by `on_message_delete`). added delete error handling and clearer logs.
+
 ## 2025-12-03
 
 Got the per-user shot limit behaving properly: the sixth post in a two-hour window is now deleted every time. The check looks at the next count (count+1) before touching the message, we return immediately on delete so the counter doesn’t drift, and when the window rolls over we start at 1 for the first shot. The DM includes the exact next allowed time. Swapped the prints in this path for the async logger so you can see the flow in the terminal and the logs channel.

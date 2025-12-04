@@ -87,6 +87,10 @@ async def on_message_delete(message):
         return
     if len(message.attachments) == 0:
         return
+    # if bot deleted this message, don't decrement count
+    if message.id in botDeletedMessages:
+        botDeletedMessages.discard(message.id)
+        return
     userId = message.author.id
     for msg in usersMessages:
         # if msg.count <= LIMIT: return
