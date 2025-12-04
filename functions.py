@@ -27,6 +27,8 @@ from vars import *
 DELAY = 7200
 LIMIT = 5
 usersMessages = []
+# track message id deleted by bot so on_message_delete doesn't decrement count
+botDeletedMessages = set()
 
 class UserMessage:
     def __init__(self, id, name, time, count, reachedLimit):
@@ -79,8 +81,20 @@ async def checkMessage(message):
                 # Compute would-be count for this incoming message
                 new_count = msg.count + 1
                 if new_count > LIMIT:
-                    await log_info("Deleted by the bot (limit exceeded)")
-                    await message.delete()
+                    await log_info(f"Limit exceeded for {msg.name}, deleting message {message.id}")
+                    # mark this message as bot-deleted so on_message_delete ignores it
+                    botDeletedMessages.add(message.id)
+                    try:
+                        await message.delete()
+                        await log_info(f"Successfully deleted message {message.id}")
+                    except discord.Forbidden:
+                        await log_error(f"No perms to delete message from {msg.name} - check bot roles")
+                        botDeletedMessages.discard(message.id)
+                    except discord.NotFound:
+                        await log_error(f"Message already deleted from {msg.name}")
+                    except Exception as e:
+                        await log_error(f"Failed to delete message from {msg.name}: {e}")
+                        botDeletedMessages.discard(message.id)
                     try:
                         await DMChannel.send(
                             f"Sorry, you can't post more than **{LIMIT}** shots per window.\n"
