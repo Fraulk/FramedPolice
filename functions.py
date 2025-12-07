@@ -91,34 +91,46 @@ async def checkMessage(message):
                             # Extensive debug logging before deletion attempt
                             bot_member = message.guild.me
                             author_member = message.author if isinstance(message.author, discord.Member) else None
-                            
+
                             await log_info(f"[DELETE_DEBUG] Guild: {message.guild.name} (ID: {message.guild.id})")
                             await log_info(f"[DELETE_DEBUG] Channel: {message.channel.name} (ID: {message.channel.id}, Type: {message.channel.type})")
                             await log_info(f"[DELETE_DEBUG] Bot member exists: {bot_member is not None}")
                             await log_info(f"[DELETE_DEBUG] Author: {message.author} (ID: {message.author.id})")
-                            
+
                             if bot_member:
                                 bot_perms = message.channel.permissions_for(bot_member)
                                 author_perms = message.channel.permissions_for(author_member) if author_member else None
-                                await log_info(f"[DELETE_DEBUG] Bot perms - Manage Messages: {bot_perms.manage_messages}, Admin: {bot_perms.administrator}")
+                                overwrite_bot = message.channel.overwrites_for(bot_member)
+                                overwrite_author = message.channel.overwrites_for(author_member) if author_member else None
+                                await log_info(
+                                    f"[DELETE_DEBUG] Bot perms - Manage Messages: {bot_perms.manage_messages}, Admin: {bot_perms.administrator}, "
+                                    f"Overwrite manage_messages: {overwrite_bot.manage_messages}"
+                                )
                                 await log_info(f"[DELETE_DEBUG] Bot top role: {bot_member.top_role} (Position: {bot_member.top_role.position})")
                                 if author_member:
-                                    await log_info(f"[DELETE_DEBUG] Author top role: {author_member.top_role} (Position: {author_member.top_role.position})")
+                                    await log_info(
+                                        f"[DELETE_DEBUG] Author top role: {author_member.top_role} (Position: {author_member.top_role.position}), "
+                                        f"Overwrite manage_messages: {overwrite_author.manage_messages if overwrite_author else None}"
+                                    )
                                     await log_info(f"[DELETE_DEBUG] Bot higher than author: {bot_member.top_role.position > author_member.top_role.position}")
                             else:
                                 await log_error(f"[DELETE_DEBUG] Bot member is None! Guild me: {message.guild.me}")
-                            
+
                             await log_info(f"[DELETE_DEBUG] Message ID: {message.id}, Author ID: {message.author.id}, Timestamp: {message.created_at}")
-                            
+
                             await message.delete()
                             await log_info(f"Successfully deleted message {message.id}")
                         except discord.Forbidden as e:
                             bot_member = message.guild.me
                             bot_perms = message.channel.permissions_for(bot_member) if bot_member else None
+                            overwrite_bot = message.channel.overwrites_for(bot_member) if bot_member else None
                             await log_error(f"[FORBIDDEN] Cannot delete message from {msg.name} (ID: {message.author.id})")
                             await log_error(f"[FORBIDDEN] Guild: {message.guild.name}, Channel: {message.channel.name}")
                             if bot_perms:
-                                await log_error(f"[FORBIDDEN] Bot perms - Manage Messages: {bot_perms.manage_messages}, Admin: {bot_perms.administrator}")
+                                await log_error(
+                                    f"[FORBIDDEN] Bot perms - Manage Messages: {bot_perms.manage_messages}, Admin: {bot_perms.administrator}, "
+                                    f"Overwrite manage_messages: {overwrite_bot.manage_messages if overwrite_bot else None}"
+                                )
                             await log_error(f"[FORBIDDEN] Full error: {e}")
                             botDeletedMessages.discard(message.id)
                         except discord.NotFound:
