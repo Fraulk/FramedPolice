@@ -26,8 +26,10 @@ from vars import *
 # Framed channel : 549986930071175169
 DELAY = 7200
 LIMIT = 5
+HOF_REACTION_THRESHOLD = 28  # reactions needed to enter Hall of Fame
+REQUEST_TIMEOUT = 10  # seconds for web requests (Google Sheets, framedsc, etc)
 usersMessages = []
-# track message id deleted by bot so on_message_delete doesn't decrement count
+# track message ids deleted by bot so on_message_delete doesn't decrement count
 botDeletedMessages = set()
 
 class UserMessage:
@@ -39,82 +41,116 @@ class UserMessage:
         self.reachedLimit = reachedLimit
 
 async def checkMessage(message):
-    if (message.author.bot):
-        await log_info("bot message ignored")
-        return
-    userId = message.author.id
-    # Debug: incoming message timestamp
-    await log_info(str(message.created_at))
-    embeds = message.embeds
-    attachmentCount = message.attachments
-    DMChannel = await message.author.create_dm()
-    # if message.content != '':
-    #     rightTitle = next((i for i, item in enumerate(titleAlts) if message.content in next(iter(item))), None)
-    #     if rightTitle is None:
-    #         altTitle = next((i for i, item in enumerate(titleAlts) if message.content in item[next(iter(item))]), None)
-    #         if altTitle is None:
-    #             # await DMChannel.send("It looks like the name of that game isn't registered on my database, could you ask to one of the moderator to add it please")
-    #             pass
-    #         else:
-    #             goodTitle = next(iter(titleAlts[altTitle]))
-    #             await DMChannel.send(f"The name you used isn't very clear, could you rename it with : **{goodTitle}**")
-    if len(attachmentCount) > 1:
-        await DMChannel.send(f"Please post your shots one by one.")
-        await message.delete()
-        return
-    if len(attachmentCount) == 0 and len(embeds) == 0:
-        await log_info('ignored')
-        return
-    #     await DMChannel.send(f"Please do not talk in this channel.")
-    #     await message.delete()
-    await log_info(f"Attachment count: {len(attachmentCount)}")
-    await log_info(f"Embeds count: {len(embeds)}")
-    for msg in usersMessages:
-        if msg.id == userId:
-            endTime = msg.time + DELAY
-            remainingTime = DELAY - (time.time() - msg.time)
-            # Mark when next post reaches the limit
-            if msg.count == LIMIT - 1:
-                msg.reachedLimit = True
-            await log_info(f"Window ends at: {endTime}")
-            if time.time() <= endTime:
-                # Compute would-be count for this incoming message
-                new_count = msg.count + 1
-                if new_count > LIMIT:
-                    await log_info(f"Limit exceeded for {msg.name}, deleting message {message.id}")
-                    # mark this message as bot-deleted so on_message_delete ignores it
-                    botDeletedMessages.add(message.id)
-                    try:
-                        await message.delete()
-                        await log_info(f"Successfully deleted message {message.id}")
-                    except discord.Forbidden:
-                        await log_error(f"No perms to delete message from {msg.name} - check bot roles")
-                        botDeletedMessages.discard(message.id)
-                    except discord.NotFound:
-                        await log_error(f"Message already deleted from {msg.name}")
-                    except Exception as e:
-                        await log_error(f"Failed to delete message from {msg.name}: {e}")
-                        botDeletedMessages.discard(message.id)
-                    try:
-                        await DMChannel.send(
-                            f"Sorry, you can't post more than **{LIMIT}** shots per window.\n"
-                            f"You can post again at **<t:{round(endTime)}:F>** (in **{datetime.timedelta(seconds=round(remainingTime))}**)."
-                        )
-                    except Exception:
-                        await log_error("DM failed, probably blocked by the user")
-                    return
-                else:
-                    msg.count = new_count
-            else:
-                msg.time = time.time()
-                msg.count = 1
-                msg.reachedLimit = False
-            await log_info(
-                f"UserId:{msg.id} first:{msg.time} count:{msg.count} by:{msg.name}"
-            )
+    try:
+        if (message.author.bot):
+            await log_info("bot message ignored")
             return
-    usersMessages.append(UserMessage(userId, message.author.name + "#" + message.author.discriminator, time.time(), 1, False))
-    await log_info(f"UserId:{userId} first:{time.time()} count:1 by:{message.author.name}#{message.author.discriminator}")
+        userId = message.author.id
+        # Debug: incoming message timestamp
+        await log_info(str(message.created_at))
+        embeds = message.embeds
+        attachmentCount = message.attachments
+        DMChannel = await message.author.create_dm()
+        # if message.content != '':
+        #     rightTitle = next((i for i, item in enumerate(titleAlts) if message.content in next(iter(item))), None)
+        #     if rightTitle is None:
+        #         altTitle = next((i for i, item in enumerate(titleAlts) if message.content in item[next(iter(item))]), None)
+        #         if altTitle is None:
+        #             # await DMChannel.send("It looks like the name of that game isn't registered on my database, could you ask to one of the moderator to add it please")
+        #             pass
+        #         else:
+        #             goodTitle = next(iter(titleAlts[altTitle]))
+        #             await DMChannel.send(f"The name you used isn't very clear, could you rename it with : **{goodTitle}**")
+        if len(attachmentCount) > 1:
+            await DMChannel.send(f"Please post your shots one by one.")
+            await message.delete()
+            return
+        if len(attachmentCount) == 0 and len(embeds) == 0:
+            await log_info('ignored')
+            return
+        #     await DMChannel.send(f"Please do n„t talk in this channel.")
+        #     await message.delete()
+        await log_info(f"Attachment count: {len(attachmentCount)}")
+        await log_info(f"Embeds count: {len(embeds)}")
+        for msg in usersMessages:
+            if msg.id == userId:
+                endTime = msg.time + DELAY
+                remainingTime = DELAY - (time.time() - msg.time)
+                # Mark when next post reaches the limit
+                if msg.count == LIMIT - 1:
+                    msg.reachedLimit = True
+                await log_info(f"Window ends at: {endTime}")
+                if time.time() <= endTime:
+                    # Compute would-be count for this incoming message
+                    new_count = msg.count + 1
+                    if new_count > LIMIT:
+                        await log_info(f"Limit exceeded for {msg.name}, deleting message {message.id}")
+                        # mark this message as bot-deleted so on_message_delete ignores it
+                        botDeletedMessages.add(message.id)
+                        try:
+                            # Extensive debug logging before deletion attempt
+                            bot_member = message.guild.me
+                            author_member = message.author if isinstance(message.author, discord.Member) else None
+                            
+                            await log_info(f"[DELETE_DEBUG] Guild: {message.guild.name} (ID: {message.guild.id})")
+                            await log_info(f"[DELETE_DEBUG] Channel: {message.channel.name} (ID: {message.channel.id}, Type: {message.channel.type})")
+                            await log_info(f"[DELETE_DEBUG] Bot member exists: {bot_member is not None}")
+                            await log_info(f"[DELETE_DEBUG] Author: {message.author} (ID: {message.author.id})")
+                            
+                            if bot_member:
+                                bot_perms = message.channel.permissions_for(bot_member)
+                                author_perms = message.channel.permissions_for(author_member) if author_member else None
+                                await log_info(f"[DELETE_DEBUG] Bot perms - Manage Messages: {bot_perms.manage_messages}, Admin: {bot_perms.administrator}")
+                                await log_info(f"[DELETE_DEBUG] Bot top role: {bot_member.top_role} (Position: {bot_member.top_role.position})")
+                                if author_member:
+                                    await log_info(f"[DELETE_DEBUG] Author top role: {author_member.top_role} (Position: {author_member.top_role.position})")
+                                    await log_info(f"[DELETE_DEBUG] Bot higher than author: {bot_member.top_role.position > author_member.top_role.position}")
+                            else:
+                                await log_error(f"[DELETE_DEBUG] Bot member is None! Guild me: {message.guild.me}")
+                            
+                            await log_info(f"[DELETE_DEBUG] Message ID: {message.id}, Author ID: {message.author.id}, Timestamp: {message.created_at}")
+                            
+                            await message.delete()
+                            await log_info(f"Successfully deleted message {message.id}")
+                        except discord.Forbidden as e:
+                            bot_member = message.guild.me
+                            bot_perms = message.channel.permissions_for(bot_member) if bot_member else None
+                            await log_error(f"[FORBIDDEN] Cannot delete message from {msg.name} (ID: {message.author.id})")
+                            await log_error(f"[FORBIDDEN] Guild: {message.guild.name}, Channel: {message.channel.name}")
+                            if bot_perms:
+                                await log_error(f"[FORBIDDEN] Bot perms - Manage Messages: {bot_perms.manage_messages}, Admin: {bot_perms.administrator}")
+                            await log_error(f"[FORBIDDEN] Full error: {e}")
+                            botDeletedMessages.discard(message.id)
+                        except discord.NotFound:
+                            await log_error(f"Message already deleted from {msg.name}")
+                            botDeletedMessages.discard(message.id)
+                        except Exception as e:
+                            await log_error(f"Failed to delete message from {msg.name}: {type(e).__name__}: {e}")
+                            botDeletedMessages.discard(message.id)
+                        try:
+                            await DMChannel.send(
+                                f"Sorry, you can't post more than **{LIMIT}** shots per window.\n"
+                                f"You can post again at **<t:{round(endTime)}:F>** (in **{datetime.timedelta(seconds=round(remainingTime))}**)."
+                            )
+                        except Exception:
+                            await log_error("DM failed, probably blocked by the user")
+                        return
+                    else:
+                        msg.count = new_count
+                else:
+                    msg.time = time.time()
+                    msg.count = 1
+                    msg.reachedLimit = False
+                await log_info(
+                    f"UserId:{msg.id} first:{msg.time} count:{msg.count} by:{msg.name}"
+                )
+                return
+        usersMessages.append(UserMessage(userId, message.author.name + "#" + message.author.discriminator, time.time(), 1, False))
+        await log_info(f"UserId:{userId} first:{time.time()} count:1 by:{message.author.name}#{message.author.discriminator}")
+    except Exception as e:
+        await log_error(f"checkMessage crashed: {e}")
+        import traceback
+        await log_error(traceback.format_exc())
 
 async def save():
     with open('messages.pkl', 'wb') as f:
@@ -144,34 +180,57 @@ def removeFilesInFolder(folder = './todaysGallery'):
             print('Failed to delete %s. Reason: %s' % (file_path, e))
 
 def changeCurrentLimit(ctx, arg):
-    print(f"'changeLimit' command has been used by {ctx.author.name}#{ctx.author.discriminator}")
-    global LIMIT
-    LIMIT = int(arg)
-    config['DEFAULT']['limit'] = str(LIMIT)
-    saveConfig()
-    print("Limit has been changed to", arg)
+    try:
+        new_limit = int(arg)
+        if new_limit <= 0:
+            print(f"Invalid limit {new_limit}: must be > 0")
+            return
+        print(f"'changeLimit' command has been used by {ctx.author.name}#{ctx.author.discriminator}")
+        global LIMIT
+        LIMIT = new_limit
+        config['DEFAULT']['limit'] = str(LIMIT)
+        saveConfig()
+        print("Limit has been changed to", arg)
+    except ValueError:
+        print(f"Invalid limit value: {arg} (expected integer)")
+    except Exception as e:
+        print(f"Error changing limit: {e}")
 
 def changeCurrentDelay(ctx, arg):
-    print(f"'changeDelay' command has been used by {ctx.author.name}#{ctx.author.discriminator}")
-    global DELAY
-    DELAY = int(arg)
-    config['DEFAULT']['delay'] = str(DELAY)
-    saveConfig()
-    print("Delay has been changed to", arg)
+    try:
+        new_delay = int(arg)
+        if new_delay <= 0:
+            print(f"Invalid delay {new_delay}: must be > 0")
+            return
+        print(f"'changeDelay' command has been used by {ctx.author.name}#{ctx.author.discriminator}")
+        global DELAY
+        DELAY = new_delay
+        config['DEFAULT']['delay'] = str(DELAY)
+        saveConfig()
+        print("Delay has been changed to", arg)
+    except ValueError:
+        print(f"Invalid delay value: {arg} (expected integer)")
+    except Exception as e:
+        print(f"Error changing delay: {e}")
 
 def getCurrentValue(): return (LIMIT, DELAY)
 
 async def resetUser(arg):
+    try:
+        user_id = int(arg)
+    except ValueError:
+        return f"Invalid user ID: {arg} (expected integer)"
+    
     curUser = ""
     response = ""
     global usersMessages
     for msg in usersMessages:
-        if msg.id == int(arg):
+        if msg.id == user_id:
             msg.count = 0
             msg.reachedLimit = False
             curUser = msg.name
     if curUser == "":
-        response = "This user either don't exists or didn't posted anything yet"
+        response = "This user either doesn't exist or didn't post anything yet"
     else:
         response = f"{curUser} has been reset"
         await save()
@@ -185,8 +244,14 @@ async def resetAllUsers():
     await save()
 
 async def getCams(args):
-    response = requests.get('https://docs.google.com/spreadsheet/ccc?key=1lnM2SM_RBzqile870zG70E39wuuseqQE0AaPW-P1p5E&output=csv')
-    assert response.status_code == 200, 'Wrong status code'
+    try:
+        response = requests.get('https://docs.google.com/spreadsheet/ccc?key=1lnM2SM_RBzqile870zG70E39wuuseqQE0AaPW-P1p5E&output=csv', timeout=REQUEST_TIMEOUT)
+        assert response.status_code == 200, 'Wrong status code'
+    except requests.Timeout:
+        return "", []
+    except Exception as e:
+        print(f"Error fetching cams: {e}")
+        return "", []
     # print(response.content)
     spreadData = str(response.content).split('\\r\\n')
     spreadData.pop(0)
@@ -229,10 +294,20 @@ async def getCams(args):
 async def getUUU(args):
     args = ' '.join(args) if type(args) is tuple else args
     args = args.replace("'", "\\'")
-    response = requests.get('https://framedsc.github.io/GeneralGuides/universal_ue4_consoleunlocker.htm')
-    assert response.status_code == 200, 'Wrong status code'
-    # print(response.content)
-    gamesListPage = re.findall(r'(?s)known to work with the unlocker.*Additionally, mos', str(response.content), flags=re.S | re.M)
+    try:
+        response = requests.get('https://framedsc.github.io/GeneralGuides/universal_ue4_consoleunlocker.htm', timeout=REQUEST_TIMEOUT)
+        assert response.status_code == 200, 'Wrong status code'
+    except requests.Timeout:
+        return "", []
+    except Exception as e:
+        print(f"Error fetching UUU guide: {e}")
+        return "", []
+    
+    try:
+        gamesListPage = re.findall(r'(?s)known to work with the unlocker.*Additionally, mos', str(response.content), flags=re.S | re.M)
+    except Exception as e:
+        print(f"Error parsing UUU content: {e}")
+        return "", []
     normalizedList = re.sub(r'<code>|<\/code>', '', gamesListPage[0])
     normalizedList = re.sub(r'\\t\\n', '', normalizedList)
     normalizedList = re.sub(r'timestop/pause', 'timestop & pause', normalizedList)
@@ -254,38 +329,52 @@ async def getUUU(args):
 async def getGuides(args):
     args = ' '.join(args) if type(args) is tuple else args
     args = args.replace("'", "\\'")
-    responseAL = requests.get('https://framedsc.github.io/A-L.htm')
-    responseMZ = requests.get('https://framedsc.github.io/M-Z.htm')
-    consoleGuide = requests.get('https://framedsc.com/Consoleguides.htm')
-    responseGeneralGuides = requests.get('https://framedsc.github.io/GeneralGuides/index.htm')
-    responseGeneralGuidesAdv = requests.get('https://framedsc.github.io/GeneralGuidesAdvanced.htm')
-    responseReshadeGuides = requests.get('https://framedsc.github.io/ReshadeGuides/index.htm')
-    responseReshadeShaderGuides = requests.get('https://framedsc.github.io/ReshadeGuidesShaderguides.htm')
-    responseReshadeAddonsGuides = requests.get('https://framedsc.com/ReshadeGuidesAddonguides.htm')
-    assert responseAL.status_code == 200, 'Wrong status code'
-    assert responseMZ.status_code == 200, 'Wrong status code'
-    assert consoleGuide.status_code == 200, 'Wrong status code'
-    assert responseGeneralGuides.status_code == 200, 'Wrong status code'
-    assert responseGeneralGuidesAdv.status_code == 200, 'Wrong status code'
-    assert responseReshadeGuides.status_code == 200, 'Wrong status code'
-    assert responseReshadeShaderGuides.status_code == 200, 'Wrong status code'
-    assert responseReshadeAddonsGuides.status_code == 200, 'Wrong status code'
-    responses = str(responseAL.content)
-    responses += str(responseMZ.content)
-    responses += str(consoleGuide.content)
-    responses += str(responseGeneralGuides.content)
-    responses += str(responseGeneralGuidesAdv.content)
-    responses += str(responseReshadeGuides.content)
-    responses += str(responseReshadeShaderGuides.content)
-    responses += str(responseReshadeAddonsGuides.content)
-    normalizedList = re.sub(r'\\t|\\n|\\r', '\n', responses)
-    guidesRegex = r'"><a href="(GameGuides\/.*\.htm|..\/ReshadeGuides\/.*\.htm|..\/GeneralGuides\/.*\.htm|ReshadeGuides\/Shaders\/.*\.htm|ReshadeGuides\/Addons\/.*\.htm)">(.*)<\/a>'
-    guides = re.finditer(guidesRegex, normalizedList, flags=re.M)
-    guideLinks = []
-    guideNames = []
-    for matchNum, match in enumerate(guides, start=1):
-        guideLinks.append(match.group(1))
-        guideNames.append(match.group(2))
+    
+    urls = [
+        'https://framedsc.github.io/A-L.htm',
+        'https://framedsc.github.io/M-Z.htm',
+        'https://framedsc.com/Consoleguides.htm',
+        'https://framedsc.github.io/GeneralGuides/index.htm',
+        'https://framedsc.github.io/GeneralGuidesAdvanced.htm',
+        'https://framedsc.github.io/ReshadeGuides/index.htm',
+        'https://framedsc.github.io/ReshadeGuidesShaders/index.htm',
+        'https://framedsc.com/ReshadeGuidesAddonguides.htm'
+    ]
+    
+    responses = []
+    for url in urls:
+        try:
+            r = requests.get(url, timeout=REQUEST_TIMEOUT)
+            assert r.status_code == 200, f'Wrong status code for {url}'
+            responses.append(r)
+        except requests.Timeout:
+            print(f"Timeout fetching {url}")
+            continue
+        except Exception as e:
+            print(f"Error fetching {url}: {e}")
+            continue
+    
+    
+    if not responses:
+        return "", []
+    
+    combined_content = ""
+    for r in responses:
+        combined_content += str(r.content)
+    
+    try:
+        normalizedList = re.sub(r'\\t|\\n|\\r', '\n', combined_content)
+        guidesRegex = r'"><a href="(GameGuides\/.*\.htm|..\/ReshadeGuides\/.*\.htm|..\/GeneralGuides\/.*\.htm|ReshadeGuides\/Shaders\/.*\.htm|ReshadeGuides\/Addons\/.*\.htm)">(.*)<\/a>'
+        guides = re.finditer(guidesRegex, normalizedList, flags=re.M)
+        guideLinks = []
+        guideNames = []
+        for matchNum, match in enumerate(guides, start=1):
+            guideLinks.append(match.group(1))
+            guideNames.append(match.group(2))
+    except Exception as e:
+        print(f"Error parsing guides: {e}")
+        return "", []
+    
     arg = args.lower()
     data = ""
     gameNames = []
@@ -298,9 +387,21 @@ async def getGuides(args):
 async def getCheats(args):
     args = ' '.join(args) if type(args) is tuple else args
     # args = args.replace("'", "\\'")
-    response = requests.get("https://framedsc.github.io/cheattablearchive.htm", allow_redirects=True)
-    assert response.status_code == 200, 'Wrong status code'
-    cheats = re.finditer(r'^<h3.*?>(.*?)<.*?<\/ul', response.text, flags=re.S | re.M)
+    try:
+        response = requests.get("https://framedsc.github.io/cheattablearchive.htm", allow_redirects=True, timeout=REQUEST_TIMEOUT)
+        assert response.status_code == 200, 'Wrong status code'
+    except requests.Timeout:
+        return "", []
+    except Exception as e:
+        print(f"Error fetching cheats: {e}")
+        return "", []
+    
+    try:
+        cheats = re.finditer(r'^<h3.*?>(.*?)<.*?<\/ul', response.text, flags=re.S | re.M)
+    except Exception as e:
+        print(f"Error parsing cheats: {e}")
+        return "", []
+    
     cheatsName = []
     cheatsContent = []
     data = ""
@@ -329,32 +430,54 @@ async def secondLook(message):
         authorId = message.mentions[0].id
     userDict = {}
     links = re.findall(r"(https://discord\.com/channels/.*/.*/\d)(?:| )", message.content)
-    if len(links) <= 3: return
-    print("---------------------------------------- Building second-look message for " + authorName)
+    if len(links) <= 3: 
+        return
+    
+    await log_info(f"Building second-look message for {authorName} with {len(links)} links")
     async with message.channel.typing():
         for link in links:
-            slink = link.split("/")
-            original_message = await bot.get_guild(int(slink[-3])).get_channel(int(slink[-2])).fetch_message(int(slink[-1]))
-            raw_shot = requests.get(original_message.attachments[0].url, stream=True).raw
-            print(raw_shot)
-            shot = Image.open(raw_shot)
-            shot = shot.convert(mode="RGB")
-            print(shot)
-            shot.save(f'secondLook/{original_message.author.name}-{original_message.created_at.timestamp()}.jpg', format="JPEG", quality=60)
-            print("shot saved")
-            sent_message = await SLDchannel.send(file=discord.File(f'secondLook/{original_message.author.name}-{original_message.created_at.timestamp()}.jpg'))
-            shotPath = f'secondLook/{original_message.author.name}-{original_message.created_at.timestamp()}.jpg'
             try:
-                blob = bucket.blob(shotPath)
-                blob.upload_from_filename(shotPath)
+                slink = link.split("/")
+                original_message = await bot.get_guild(int(slink[-3])).get_channel(int(slink[-2])).fetch_message(int(slink[-1]))
+            except Exception as e:
+                await log_error(f"Failed to fetch message from link {link}: {e}")
+                continue
+            
+            try:
+                raw_shot = requests.get(original_message.attachments[0].url, stream=True, timeout=REQUEST_TIMEOUT).raw
+            except requests.Timeout:
+                await log_error(f"Timeout downloading attachment from {original_message.author.name}")
+                continue
+            except Exception as e:
+                await log_error(f"Failed to download attachment: {e}")
+                continue
+            
+            try:
+                shot = Image.open(raw_shot)
+                shot = shot.convert(mode="RGB")
+                shot_filename = f'secondLook/{original_message.author.name}-{original_message.created_at.timestamp()}.jpg'
+                shot.save(shot_filename, format="JPEG", quality=60)
+            except Exception as e:
+                await log_error(f"Failed to process image: {e}")
+                continue
+            
+            try:
+                sent_message = await SLDchannel.send(file=discord.File(shot_filename))
+            except Exception as e:
+                await log_error(f"Failed to send to Discord: {e}")
+                continue
+            
+            try:
+                blob = bucket.blob(shot_filename)
+                blob.upload_from_filename(shot_filename)
                 blob.make_public()
-                print(blob.public_url)
-            except: continue
-            print(sent_message)
+            except Exception as e:
+                await log_error(f"Failed to upload to Firebase: {e}")
+                continue
+            
             tempDict = {}
             tempDict['id'] = f"{original_message.author.id}"
             tempDict['name'] = original_message.author.name
-            # tempDict['nickname'] = original_message.author.nick
             tempDict['displayName'] = original_message.author.display_name
             tempDict['globalName'] = original_message.author.global_name
             tempDict['isSpoiler'] = original_message.attachments[0].is_spoiler()
@@ -364,9 +487,19 @@ async def secondLook(message):
             tempDict['height'] = sent_message.attachments[0].height
             tempDict['messageUrl'] = link
             userDict[str(original_message.id)] = tempDict
-    await bot.get_channel(SLChannel).send(f"Here is your link : https://second-look.netlify.app/gallery/{authorId}")
-    print("---------------------------------------- Building ended")
-    ref.child(str(authorId)).set(userDict)
+            await log_info(f"Processed shot from {original_message.author.name}")
+    
+    try:
+        await bot.get_channel(SLChannel).send(f"Here is your link : https://second-look.netlify.app/gallery/{authorId}")
+        await log_info(f"Second look complete for {authorName}")
+    except Exception as e:
+        await log_error(f"Failed to send second look summary: {e}")
+    
+    try:
+        ref.child(str(authorId)).set(userDict)
+    except Exception as e:
+        await log_error(f"Failed to update Firebase for {authorName}: {e}")
+    
     removeFilesInFolder("./secondLook")
 
 async def todaysGallery():
@@ -375,64 +508,107 @@ async def todaysGallery():
     day_ago = datetime.datetime.today() - datetime.timedelta(days=1)
     SYSchannel = bot.get_channel(SYSChannel)
     SLDchannel = bot.get_channel(SLDump)
-    if SYSchannel is None: return
-    print("---------------------------------------- Building today's gallery")
-    messages = [message async for message in SYSchannel.history(limit=200, after=day_ago)]
+    if SYSchannel is None:
+        await log_error("SYSChannel not found, skipping todaysGallery")
+        return
+    await log_info("Building today's gallery")
+    try:
+        messages = [message async for message in SYSchannel.history(limit=200, after=day_ago)]
+    except Exception as e:
+        await log_error(f"Failed to fetch message history: {e}")
+        return
+    
     for msg in messages:
         try:
-            enough_reaction = False if await getShotReactions(msg) <= 28 else True  # TODO: Change back to 28 for production
-        except: continue
-        try:
-            raw_shot = requests.get(msg.attachments[0].url, stream=True).raw
-        except: continue
-        print(raw_shot)
-        shot = Image.open(raw_shot)
-        shot = shot.convert(mode="RGB")
-        print(shot)
-        shot.save(f'todaysGallery/{msg.author.name}-{msg.created_at.timestamp()}.jpg', format="JPEG", quality=50)
-        print("shot saved")
-        try:
-            sent_message = await SLDchannel.send(file=discord.File(f'todaysGallery/{msg.author.name}-{msg.created_at.timestamp()}.jpg'))
-        except: continue
-        shotPath = f'todaysGallery/{msg.author.name}-{msg.created_at.timestamp()}.jpg'
-        try:
-            blob = bucket.blob(shotPath)
-            blob.upload_from_filename(shotPath)
-            blob.make_public()
-            print(blob.public_url)
-        except: continue
-        print(sent_message)
-        tempDict = {}
-        tempDict['id'] = f"{msg.author.id}"
-        tempDict['name'] = msg.author.name
-        # tempDict['nickname'] = msg.author.nick
-        tempDict['displayName'] = msg.author.display_name
-        tempDict['createdAt'] = msg.created_at.timestamp()
-        tempDict['imageUrl'] = blob.public_url
-        tempDict['width'] = sent_message.attachments[0].width
-        tempDict['height'] = sent_message.attachments[0].height
-        tempDict['messageUrl'] = msg.jump_url
-        tempDict['isHoffed'] = enough_reaction
-        userDict[str(msg.id)] = tempDict
-        print("next message")
-    print("end")
-    botsData = ref.child(str(bot.user.id)).get()
-    if botsData is not None:
-        global_len = len(botsData) + len(userDict)
-    else:
-        botsData = {}
-        global_len = len(userDict)
-    # adds the current gallery shot count stored in firebase to the count of today's shot and if less, does nothing, else it removes the extra shots from the start of the dict (the oldest)
-    if global_len >= 1000:
-        for i in range(global_len - 1000):
-            botsData.pop(next(iter(botsData)))
-    botsData.update(userDict)
-    print(len(botsData))
-    ref.child(str(bot.user.id)).set(botsData)
-    # await bot.get_channel(889793521106714634).send(f"Today's gallery has been updated with today's shot : https://second-look.netlify.app?id={bot.user.id}")
-    await bot.get_channel(SLChannel).send(f"Today's gallery has been updated with today's shot : https://second-look.netlify.app/gallery/todays-gallery")
+            # Get reaction count
+            try:
+                enough_reaction = False if await getShotReactions(msg) <= HOF_REACTION_THRESHOLD else True
+            except Exception as e:
+                await log_error(f"Failed to get reactions for msg {msg.id}: {e}")
+                continue
+            
+            # Download attachment with timeout
+            try:
+                raw_shot = requests.get(msg.attachments[0].url, stream=True, timeout=REQUEST_TIMEOUT).raw
+            except requests.Timeout:
+                await log_error(f"Request timeout for attachment from {msg.author.name}")
+                continue
+            except Exception as e:
+                await log_error(f"Failed to download attachment from {msg.author.name}: {e}")
+                continue
+            
+            # Process image
+            try:
+                shot = Image.open(raw_shot)
+                shot = shot.convert(mode="RGB")
+                shot_filename = f'todaysGallery/{msg.author.name}-{msg.created_at.timestamp()}.jpg'
+                shot.save(shot_filename, format="JPEG", quality=50)
+            except Exception as e:
+                await log_error(f"Failed to process/save image from {msg.author.name}: {e}")
+                continue
+            
+            # Send to Discord
+            try:
+                sent_message = await SLDchannel.send(file=discord.File(shot_filename))
+            except Exception as e:
+                await log_error(f"Failed to send image to Discord from {msg.author.name}: {e}")
+                continue
+            
+            # Upload to Firebase
+            try:
+                blob = bucket.blob(shot_filename)
+                blob.upload_from_filename(shot_filename)
+                blob.make_public()
+            except Exception as e:
+                await log_error(f"Failed to upload to Firebase from {msg.author.name}: {e}")
+                continue
+            
+            # Add to userDict
+            tempDict = {}
+            tempDict['id'] = f"{msg.author.id}"
+            tempDict['name'] = msg.author.name
+            tempDict['displayName'] = msg.author.display_name
+            tempDict['createdAt'] = msg.created_at.timestamp()
+            tempDict['imageUrl'] = blob.public_url
+            tempDict['width'] = sent_message.attachments[0].width
+            tempDict['height'] = sent_message.attachments[0].height
+            tempDict['messageUrl'] = msg.jump_url
+            tempDict['isHoffed'] = enough_reaction
+            userDict[str(msg.id)] = tempDict
+            await log_info(f"Processed shot from {msg.author.name}")
+        except Exception as e:
+            await log_error(f"Unexpected error processing message {msg.id}: {e}")
+            continue
+    
+    # Update Firebase with all processed shots
+    try:
+        botsData = ref.child(str(bot.user.id)).get()
+        if botsData is not None:
+            global_len = len(botsData) + len(userDict)
+        else:
+            botsData = {}
+            global_len = len(userDict)
+        
+        # Keep only last 1000 shots
+        if global_len >= 1000:
+            for i in range(global_len - 1000):
+                botsData.pop(next(iter(botsData)))
+        
+        botsData.update(userDict)
+        ref.child(str(bot.user.id)).set(botsData)
+        await log_info(f"Gallery updated with {len(userDict)} new shots, total: {len(botsData)}")
+    except Exception as e:
+        await log_error(f"Failed to update Firebase: {e}")
+        return
+    
+    # Send summary to channel
+    try:
+        await bot.get_channel(SLChannel).send(f"Today's gallery has been updated with today's shot : https://second-look.netlify.app/gallery/todays-gallery")
+    except Exception as e:
+        await log_error(f"Failed to send gallery update message: {e}")
+    
     removeFilesInFolder("./todaysGallery")
-    print("---------------------------------------- Building ended")
+    await log_info("Gallery building completed")
 
 async def startThread(message):
     title = f"Hello There, {message.author.name}"
