@@ -11,9 +11,9 @@ from vars import LogChannel
 
 # Config
 LOG_CHANNEL_ID = LogChannel
-BUFFER_INTERVAL = 60  # send bundled logs every 60 sec
+BUFFER_INTERVAL = 10  # send bundled logs every 10 sec (was 60)
 MAX_DISCORD_MESSAGE = 2000  # Discord message char limit
-MAX_LOGS_PER_MESSAGE = 50  # Max lines per message
+MAX_LOGS_PER_MESSAGE = 200  # Max lines per message (was 50)
 
 class LogBuffer:
     def __init__(self, bot):
@@ -113,19 +113,28 @@ async def log_to_hof(message: str):
     """Log HOF-related stuff"""
     print(f"[HOF] {message}")
     if _LogBufferContainer.instance:
-        await _LogBufferContainer.instance.add_log(f"[HOF] {message}")
+        try:
+            await _LogBufferContainer.instance.add_log(f"[HOF] {message}")
+        except Exception as e:
+            print(f"[LOGGER] Failed to add HOF log: {e}")
 
 async def log_error(message: str):
     """Log errors"""
     print(f"[ERROR] {message}")
     if _LogBufferContainer.instance:
-        await _LogBufferContainer.instance.add_log(f"[ERROR] {message}")
+        try:
+            await _LogBufferContainer.instance.add_log(f"[ERROR] {message}")
+        except Exception as e:
+            print(f"[LOGGER] Failed to add error log: {e}")
 
 async def log_info(message: str):
     """Log info"""
     print(f"[INFO] {message}")
     if _LogBufferContainer.instance:
-        await _LogBufferContainer.instance.add_log(f"[INFO] {message}")
+        try:
+            await _LogBufferContainer.instance.add_log(f"[INFO] {message}")
+        except Exception as e:
+            print(f"[LOGGER] Failed to add info log: {e}")
 
 def set_log_buffer(buffer):
     """Set the global log buffer instance"""
