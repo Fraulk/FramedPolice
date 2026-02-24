@@ -1124,7 +1124,7 @@ async def notifyHOFedUser(message):
         try:
             url_view = discord.ui.View()
             url_view.add_item(discord.ui.Button(label='Go to Message', style=discord.ButtonStyle.url, url=message.jump_url))
-            await DMChannel.send(f"Yo {user.name}, your shot got hoffed!", view=url_view)
+            await DMChannel.send(f"Hello {user.name}, your shot got hoffed!", view=url_view)
             await log_to_hof(f"Sent DM to {user.name}")
         except discord.Forbidden:
             await log_error(f"No perms to DM {user.name}")
