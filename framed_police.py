@@ -29,7 +29,7 @@ async def on_ready():
     
     if not os.path.isfile('./tempBingo.png'):
         recreateBingo(emptyBingo)
-    bot.dispatch("today_gallery")
+    # bot.dispatch("today_gallery")
     bot.dispatch("new_day")
 
 @bot.event
@@ -38,8 +38,8 @@ async def on_message(message):
     if message.channel.id == SYSChannel:
         await checkMessage(message)
         await save()
-    elif message.channel.id == SLChannel:
-        await secondLook(message)
+    # elif message.channel.id == SLChannel:
+    #     await secondLook(message)
     elif message.channel.id == IntroChannel:
         await startThread(message)
     elif message.channel.id == HOFChannel:
@@ -524,10 +524,10 @@ async def getScore(ctx, *args):
 #    await ctx.send(f"Posted HOF test embed for {username}")
 
 # Test command for today's gallery, don't forget to hardcode the output channel id to something else than framed second look channel
-@commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
-@bot.command(name='tg')
-async def tg(ctx):
-    await todaysGallery()
+# @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
+# @bot.command(name='tg')
+# async def tg(ctx):
+#     await todaysGallery()
 
 # @commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
 # @bot.command(name='getLastYearMessages')
@@ -577,15 +577,15 @@ async def help(interaction: discord.Interaction):
     # does the gif version of my pfp still exists after nitro ends ? https://cdn.discordapp.com/avatars/192300712049246208/a_c7d1c089c53b152ed0b3b00304fa3307.gif?size=40
     await interaction.response.send_message(embed=e, ephemeral=True)
 
-@bot.event
-async def on_today_gallery():
-    await asyncio.sleep(secs)
-    await todaysGallery()
+# @bot.event
+# async def on_today_gallery():
+#     await asyncio.sleep(secs)
+#     await todaysGallery()
 
-@bot.event
-async def on_today_gallery_end():
-    await asyncio.sleep(datetime.timedelta(days=1).total_seconds())
-    await todaysGallery()
+# @bot.event
+# async def on_today_gallery_end():
+#     await asyncio.sleep(datetime.timedelta(days=1).total_seconds())
+#     await todaysGallery()
 
 @bot.event
 async def on_new_day():
@@ -620,10 +620,10 @@ async def checkBirthdayNames():
     bot.dispatch("new_day_end")
 
 # i should put this in a function and call it for the sleep and so i could just have one event function, but oh god i'm so lazy
-x = datetime.datetime.today()
-y = x.replace(day=x.day, hour=18, minute=0, second=0, microsecond=0) + datetime.timedelta(days=1)
-delta_t = y - x
-secs = delta_t.total_seconds()
+# x = datetime.datetime.today()
+# y = x.replace(day=x.day, hour=18, minute=0, second=0, microsecond=0) + datetime.timedelta(days=1)
+# delta_t = y - x
+# secs = delta_t.total_seconds()
 # secs = 60
 
 # BUG : when multiple person spamm shots, sometime the bot ignore the event/code and some shots bypass the limit, it may be caused by the fact that 
