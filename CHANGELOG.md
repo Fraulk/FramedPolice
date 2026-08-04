@@ -1,3 +1,7 @@
+## 2026-08-04
+
+Added a prediction market / betting system. A mod posts a question with `/bet_create` (two options, a duration like `2h`, `1d`, `30m`, whatever), it goes up as an embed with vote buttons, and people click to bet on one side or the other - can switch their vote until it closes. Voting auto-closes when the timer runs out, then a mod resolves it with `/bet_close` and picks the winning side. Everyone who called it right splits points based on how many people bet the other way (so calling the underdog pays off more), wrong picks eat a flat -10. Everything's stored in a local sqlite db (`betting.db`) so scores and open bets survive a bot restart. `/my_bets` shows your own history and score, `/leaderboard` shows the server ranking (or the ranking for one specific bet).
+
 ## 2025-12-04
 
 - Fix: sixth shot is now reliably deleted and counter no longer drifts (bot-marked deletes are ignored by `on_message_delete`). added delete error handling and clearer logs.
