@@ -433,194 +433,194 @@ async def getCheats(args):
                 data += "<https://framedsc.github.io/" + match2.group(1) + ">\n" if matchNum2 == 1 else "\t**╘** : <https://framedsc.github.io/" + match2.group(1) + ">\n"
     return data, gameNames
 
-async def secondLook(message):
-    authorName = message.author.name + "#" + message.author.discriminator
-    authorId = message.author.id
-    SLDchannel = bot.get_channel(SLDump)
-    if message.author.bot and len(message.mentions) > 0: 
-        authorName = message.mentions[0].name + "#" + message.mentions[0].discriminator
-        authorId = message.mentions[0].id
-    userDict = {}
-    links = re.findall(r"(https://discord\.com/channels/.*/.*/\d)(?:| )", message.content)
-    if len(links) <= 3: 
-        return
+# async def secondLook(message):
+#     authorName = message.author.name + "#" + message.author.discriminator
+#     authorId = message.author.id
+#     SLDchannel = bot.get_channel(SLDump)
+#     if message.author.bot and len(message.mentions) > 0: 
+#         authorName = message.mentions[0].name + "#" + message.mentions[0].discriminator
+#         authorId = message.mentions[0].id
+#     userDict = {}
+#     links = re.findall(r"(https://discord\.com/channels/.*/.*/\d)(?:| )", message.content)
+#     if len(links) <= 3: 
+#         return
     
-    await log_info(f"Building second-look message for {authorName} with {len(links)} links")
-    async with message.channel.typing():
-        for link in links:
-            try:
-                slink = link.split("/")
-                original_message = await bot.get_guild(int(slink[-3])).get_channel(int(slink[-2])).fetch_message(int(slink[-1]))
-            except Exception as e:
-                await log_error(f"Failed to fetch message from link {link}: {e}")
-                continue
+#     await log_info(f"Building second-look message for {authorName} with {len(links)} links")
+#     async with message.channel.typing():
+#         for link in links:
+#             try:
+#                 slink = link.split("/")
+#                 original_message = await bot.get_guild(int(slink[-3])).get_channel(int(slink[-2])).fetch_message(int(slink[-1]))
+#             except Exception as e:
+#                 await log_error(f"Failed to fetch message from link {link}: {e}")
+#                 continue
             
-            try:
-                raw_shot = requests.get(original_message.attachments[0].url, stream=True, timeout=REQUEST_TIMEOUT).raw
-            except requests.Timeout:
-                await log_error(f"Timeout downloading attachment from {original_message.author.name}")
-                continue
-            except Exception as e:
-                await log_error(f"Failed to download attachment: {e}")
-                continue
+#             try:
+#                 raw_shot = requests.get(original_message.attachments[0].url, stream=True, timeout=REQUEST_TIMEOUT).raw
+#             except requests.Timeout:
+#                 await log_error(f"Timeout downloading attachment from {original_message.author.name}")
+#                 continue
+#             except Exception as e:
+#                 await log_error(f"Failed to download attachment: {e}")
+#                 continue
             
-            try:
-                shot = Image.open(raw_shot)
-                shot = shot.convert(mode="RGB")
-                shot_filename = f'secondLook/{original_message.author.name}-{original_message.created_at.timestamp()}.jpg'
-                shot.save(shot_filename, format="JPEG", quality=60)
-            except Exception as e:
-                await log_error(f"Failed to process image: {e}")
-                continue
+#             try:
+#                 shot = Image.open(raw_shot)
+#                 shot = shot.convert(mode="RGB")
+#                 shot_filename = f'secondLook/{original_message.author.name}-{original_message.created_at.timestamp()}.jpg'
+#                 shot.save(shot_filename, format="JPEG", quality=60)
+#             except Exception as e:
+#                 await log_error(f"Failed to process image: {e}")
+#                 continue
             
-            try:
-                sent_message = await SLDchannel.send(file=discord.File(shot_filename))
-            except Exception as e:
-                await log_error(f"Failed to send to Discord: {e}")
-                continue
+#             try:
+#                 sent_message = await SLDchannel.send(file=discord.File(shot_filename))
+#             except Exception as e:
+#                 await log_error(f"Failed to send to Discord: {e}")
+#                 continue
             
-            try:
-                blob = bucket.blob(shot_filename)
-                blob.upload_from_filename(shot_filename)
-                blob.make_public()
-            except Exception as e:
-                await log_error(f"Failed to upload to Firebase: {e}")
-                continue
+#             try:
+#                 blob = bucket.blob(shot_filename)
+#                 blob.upload_from_filename(shot_filename)
+#                 blob.make_public()
+#             except Exception as e:
+#                 await log_error(f"Failed to upload to Firebase: {e}")
+#                 continue
             
-            tempDict = {}
-            tempDict['id'] = f"{original_message.author.id}"
-            tempDict['name'] = original_message.author.name
-            tempDict['displayName'] = original_message.author.display_name
-            tempDict['globalName'] = original_message.author.global_name
-            tempDict['isSpoiler'] = original_message.attachments[0].is_spoiler()
-            tempDict['createdAt'] = original_message.created_at.timestamp()
-            tempDict['imageUrl'] = blob.public_url
-            tempDict['width'] = sent_message.attachments[0].width
-            tempDict['height'] = sent_message.attachments[0].height
-            tempDict['messageUrl'] = link
-            userDict[str(original_message.id)] = tempDict
-            await log_info(f"Processed shot from {original_message.author.name}")
+#             tempDict = {}
+#             tempDict['id'] = f"{original_message.author.id}"
+#             tempDict['name'] = original_message.author.name
+#             tempDict['displayName'] = original_message.author.display_name
+#             tempDict['globalName'] = original_message.author.global_name
+#             tempDict['isSpoiler'] = original_message.attachments[0].is_spoiler()
+#             tempDict['createdAt'] = original_message.created_at.timestamp()
+#             tempDict['imageUrl'] = blob.public_url
+#             tempDict['width'] = sent_message.attachments[0].width
+#             tempDict['height'] = sent_message.attachments[0].height
+#             tempDict['messageUrl'] = link
+#             userDict[str(original_message.id)] = tempDict
+#             await log_info(f"Processed shot from {original_message.author.name}")
     
-    try:
-        await bot.get_channel(SLChannel).send(f"Here is your link : https://second-look.netlify.app/gallery/{authorId}")
-        await log_info(f"Second look complete for {authorName}")
-    except Exception as e:
-        await log_error(f"Failed to send second look summary: {e}")
+#     try:
+#         await bot.get_channel(SLChannel).send(f"Here is your link : https://second-look.netlify.app/gallery/{authorId}")
+#         await log_info(f"Second look complete for {authorName}")
+#     except Exception as e:
+#         await log_error(f"Failed to send second look summary: {e}")
     
-    try:
-        ref.child(str(authorId)).set(userDict)
-    except Exception as e:
-        await log_error(f"Failed to update Firebase for {authorName}: {e}")
+#     try:
+#         ref.child(str(authorId)).set(userDict)
+#     except Exception as e:
+#         await log_error(f"Failed to update Firebase for {authorName}: {e}")
     
-    removeFilesInFolder("./secondLook")
+#     removeFilesInFolder("./secondLook")
 
-async def todaysGallery():
-    bot.dispatch("today_gallery_end")
-    userDict = {}
-    day_ago = datetime.datetime.today() - datetime.timedelta(days=1)
-    SYSchannel = bot.get_channel(SYSChannel)
-    SLDchannel = bot.get_channel(SLDump)
-    if SYSchannel is None:
-        await log_error("SYSChannel not found, skipping todaysGallery")
-        return
-    await log_info("Building today's gallery")
-    try:
-        messages = [message async for message in SYSchannel.history(limit=200, after=day_ago)]
-    except Exception as e:
-        await log_error(f"Failed to fetch message history: {e}")
-        return
+# async def todaysGallery():
+#     bot.dispatch("today_gallery_end")
+#     userDict = {}
+#     day_ago = datetime.datetime.today() - datetime.timedelta(days=1)
+#     SYSchannel = bot.get_channel(SYSChannel)
+#     SLDchannel = bot.get_channel(SLDump)
+#     if SYSchannel is None:
+#         await log_error("SYSChannel not found, skipping todaysGallery")
+#         return
+#     await log_info("Building today's gallery")
+#     try:
+#         messages = [message async for message in SYSchannel.history(limit=200, after=day_ago)]
+#     except Exception as e:
+#         await log_error(f"Failed to fetch message history: {e}")
+#         return
     
-    for msg in messages:
-        try:
-            # Get reaction count
-            try:
-                enough_reaction = False if await getShotReactions(msg) <= HOF_REACTION_THRESHOLD else True
-            except Exception as e:
-                await log_error(f"Failed to get reactions for msg {msg.id}: {e}")
-                continue
+#     for msg in messages:
+#         try:
+#             # Get reaction count
+#             try:
+#                 enough_reaction = False if await getShotReactions(msg) <= HOF_REACTION_THRESHOLD else True
+#             except Exception as e:
+#                 await log_error(f"Failed to get reactions for msg {msg.id}: {e}")
+#                 continue
             
-            # Download attachment with timeout
-            try:
-                raw_shot = requests.get(msg.attachments[0].url, stream=True, timeout=REQUEST_TIMEOUT).raw
-            except requests.Timeout:
-                await log_error(f"Request timeout for attachment from {msg.author.name}")
-                continue
-            except Exception as e:
-                await log_error(f"Failed to download attachment from {msg.author.name}: {e}")
-                continue
+#             # Download attachment with timeout
+#             try:
+#                 raw_shot = requests.get(msg.attachments[0].url, stream=True, timeout=REQUEST_TIMEOUT).raw
+#             except requests.Timeout:
+#                 await log_error(f"Request timeout for attachment from {msg.author.name}")
+#                 continue
+#             except Exception as e:
+#                 await log_error(f"Failed to download attachment from {msg.author.name}: {e}")
+#                 continue
             
-            # Process image
-            try:
-                shot = Image.open(raw_shot)
-                shot = shot.convert(mode="RGB")
-                shot_filename = f'todaysGallery/{msg.author.name}-{msg.created_at.timestamp()}.jpg'
-                shot.save(shot_filename, format="JPEG", quality=50)
-            except Exception as e:
-                await log_error(f"Failed to process/save image from {msg.author.name}: {e}")
-                continue
+#             # Process image
+#             try:
+#                 shot = Image.open(raw_shot)
+#                 shot = shot.convert(mode="RGB")
+#                 shot_filename = f'todaysGallery/{msg.author.name}-{msg.created_at.timestamp()}.jpg'
+#                 shot.save(shot_filename, format="JPEG", quality=50)
+#             except Exception as e:
+#                 await log_error(f"Failed to process/save image from {msg.author.name}: {e}")
+#                 continue
             
-            # Send to Discord
-            try:
-                sent_message = await SLDchannel.send(file=discord.File(shot_filename))
-            except Exception as e:
-                await log_error(f"Failed to send image to Discord from {msg.author.name}: {e}")
-                continue
+#             # Send to Discord
+#             try:
+#                 sent_message = await SLDchannel.send(file=discord.File(shot_filename))
+#             except Exception as e:
+#                 await log_error(f"Failed to send image to Discord from {msg.author.name}: {e}")
+#                 continue
             
-            # Upload to Firebase
-            try:
-                blob = bucket.blob(shot_filename)
-                blob.upload_from_filename(shot_filename)
-                blob.make_public()
-            except Exception as e:
-                await log_error(f"Failed to upload to Firebase from {msg.author.name}: {e}")
-                continue
+#             # Upload to Firebase
+#             try:
+#                 blob = bucket.blob(shot_filename)
+#                 blob.upload_from_filename(shot_filename)
+#                 blob.make_public()
+#             except Exception as e:
+#                 await log_error(f"Failed to upload to Firebase from {msg.author.name}: {e}")
+#                 continue
             
-            # Add to userDict
-            tempDict = {}
-            tempDict['id'] = f"{msg.author.id}"
-            tempDict['name'] = msg.author.name
-            tempDict['displayName'] = msg.author.display_name
-            tempDict['createdAt'] = msg.created_at.timestamp()
-            tempDict['imageUrl'] = blob.public_url
-            tempDict['width'] = sent_message.attachments[0].width
-            tempDict['height'] = sent_message.attachments[0].height
-            tempDict['messageUrl'] = msg.jump_url
-            tempDict['isHoffed'] = enough_reaction
-            userDict[str(msg.id)] = tempDict
-            await log_info(f"Processed shot from {msg.author.name}")
-        except Exception as e:
-            await log_error(f"Unexpected error processing message {msg.id}: {e}")
-            continue
+#             # Add to userDict
+#             tempDict = {}
+#             tempDict['id'] = f"{msg.author.id}"
+#             tempDict['name'] = msg.author.name
+#             tempDict['displayName'] = msg.author.display_name
+#             tempDict['createdAt'] = msg.created_at.timestamp()
+#             tempDict['imageUrl'] = blob.public_url
+#             tempDict['width'] = sent_message.attachments[0].width
+#             tempDict['height'] = sent_message.attachments[0].height
+#             tempDict['messageUrl'] = msg.jump_url
+#             tempDict['isHoffed'] = enough_reaction
+#             userDict[str(msg.id)] = tempDict
+#             await log_info(f"Processed shot from {msg.author.name}")
+#         except Exception as e:
+#             await log_error(f"Unexpected error processing message {msg.id}: {e}")
+#             continue
     
-    # Update Firebase with all processed shots
-    try:
-        botsData = ref.child(str(bot.user.id)).get()
-        if botsData is not None:
-            global_len = len(botsData) + len(userDict)
-        else:
-            botsData = {}
-            global_len = len(userDict)
+#     # Update Firebase with all processed shots
+#     try:
+#         botsData = ref.child(str(bot.user.id)).get()
+#         if botsData is not None:
+#             global_len = len(botsData) + len(userDict)
+#         else:
+#             botsData = {}
+#             global_len = len(userDict)
         
-        # Keep only last 1000 shots
-        if global_len >= 1000:
-            for i in range(global_len - 1000):
-                botsData.pop(next(iter(botsData)))
+#         # Keep only last 1000 shots
+#         if global_len >= 1000:
+#             for i in range(global_len - 1000):
+#                 botsData.pop(next(iter(botsData)))
         
-        botsData.update(userDict)
-        ref.child(str(bot.user.id)).set(botsData)
-        await log_info(f"Gallery updated with {len(userDict)} new shots, total: {len(botsData)}")
-    except Exception as e:
-        await log_error(f"Failed to update Firebase: {e}")
-        return
+#         botsData.update(userDict)
+#         ref.child(str(bot.user.id)).set(botsData)
+#         await log_info(f"Gallery updated with {len(userDict)} new shots, total: {len(botsData)}")
+#     except Exception as e:
+#         await log_error(f"Failed to update Firebase: {e}")
+#         return
     
-    # Send summary to channel
-    try:
-        await bot.get_channel(SLChannel).send(f"Today's gallery has been updated with today's shot : https://second-look.netlify.app/gallery/todays-gallery")
-    except Exception as e:
-        await log_error(f"Failed to send gallery update message: {e}")
+#     # Send summary to channel
+#     try:
+#         await bot.get_channel(SLChannel).send(f"Today's gallery has been updated with today's shot : https://second-look.netlify.app/gallery/todays-gallery")
+#     except Exception as e:
+#         await log_error(f"Failed to send gallery update message: {e}")
     
-    removeFilesInFolder("./todaysGallery")
-    await log_info("Gallery building completed")
+#     removeFilesInFolder("./todaysGallery")
+#     await log_info("Gallery building completed")
 
 async def startThread(message):
     title = f"Hello There, {message.author.name}"
