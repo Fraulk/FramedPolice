@@ -11,6 +11,8 @@ from functions import *
 from wordle import *
 from guess_the_vp import *
 from logger import LogBuffer, set_log_buffer, log_info
+from db_connector import betting_db
+from betting import initialize_display_id_counter, restore_active_predictions
 
 # pip install -U git+https://github.com/Rapptz/discord.py
 
@@ -26,6 +28,16 @@ async def on_ready():
     asyncio.create_task(log_buffer.start_flusher())
     print("[LOGGER] Log buffer up and running")
     await log_info("Bot is ready")
+
+    # Connect to betting SQLite DB
+    connected = await betting_db.connect()
+    if connected:
+        await log_info("[BETTING] SQLite connected")
+        await initialize_display_id_counter(betting_db)
+        await restore_active_predictions(bot, betting_db)
+    else:
+        await log_info("[BETTING] SQLite not available — bets will work in-memory only (no scores persisted)")
+        await initialize_display_id_counter(None)
     
     if not os.path.isfile('./tempBingo.png'):
         recreateBingo(emptyBingo)

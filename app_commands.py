@@ -1,9 +1,12 @@
 from typing import Optional
 from discord import app_commands, ui
 from discord.interactions import Interaction
+from discord.ext import commands
 
 from vars import *
 from functions import *
+from betting import activePredictions, build_prediction_embed, PredictionView, close_prediction, auto_close_prediction, Prediction, parse_duration
+from db_connector import betting_db, DB_PATH
 
 # OLD COMMANDS APP COMMAND EQUIVALENT >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -226,7 +229,7 @@ async def report_message(interaction: discord.Interaction, message: discord.Mess
 
     await interaction.response.send_modal(ReportModal())
 
-@commands.has_any_role(549988038516670506, 549988228737007638, 874375168204611604)
+@commands.has_any_role(*ModRoles)
 @bot.command(name='sync', help='Sync slash commands')
 async def sync(ctx):
     guild = discord.Object(id=GUILD_ID)  # you can use a full discord.Guild as the method accepts a Snowflake
@@ -247,6 +250,15 @@ async def sync(ctx):
     bot.tree.add_command(cmd)
     await bot.tree.sync(guild=guild)
     await bot.tree.sync()
+
+@commands.has_any_role(*ModRoles)
+@bot.command(name='syncbets', help='Sync betting slash commands')
+async def syncbets(ctx):
+    guild = discord.Object(id=GUILD_ID)
+    bot.tree.clear_commands(type=discord.AppCommandType.message, guild=guild)
+    await bot.tree.sync(guild=guild)
+    await bot.tree.sync()
+    await ctx.send("Betting slash commands synced!")
 
 @bot.tree.context_menu(name='Add to your second look list')
 async def addSLList(interaction: discord.Interaction, message: discord.Message):
@@ -327,6 +339,323 @@ async def birthdayModal(interaction: discord.Interaction):
         await saveBirthdays()
         return await interaction.response.send_message(content="Removed from the birthday list", ephemeral=True)
     await interaction.response.send_message(content="Not in the list", ephemeral=True)
+
+# betting / prediction market commands start here
+
+def _require_db():
+    # commands can still work off activePredictions even if sqlite is down, just no persistence/scores
+    return betting_db if betting_db.is_connected() else None
+
+
+@app_commands.checks.has_role("Founders Edition")
+@bot.tree.command(name="bet_create", description="[MOD] Create a new prediction market bet")
+@app_commands.describe(
+    question="The prediction question, e.g. 'Will Bloodborne PC be announced?'",
+    description="Optional extra context or rules",
+    option_a="Label for the YES/first option (default: YES)",
+    option_b="Label for the NO/second option (default: NO)",
+    duration="How long voting stays open, e.g. 30m, 2h, 2 hours, 1d, 2 days (default: 24h)",
+)
+async def bet_create(
+    interaction: discord.Interaction,
+    question: str,
+    option_a: str = "YES",
+    option_b: str = "NO",
+    duration: str = "24h",
+    description: str = "",
+):
+    await interaction.response.defer(ephemeral=False)
+
+    try:
+        duration_minutes = parse_duration(duration)
+    except ValueError:
+        await interaction.followup.send(
+            f"Couldn't make sense of `{duration}` as a duration. Try something like `30m`, `2h`, `2 hours`, `1d` or `2 days`.",
+            ephemeral=True,
+        )
+        return
+
+    closes_at = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=duration_minutes)
+
+    pred = Prediction(
+        question=question,
+        description=description,
+        option_a=option_a,
+        option_b=option_b,
+        duration_minutes=duration_minutes,
+        creator_id=interaction.user.id,
+        creator_name=interaction.user.display_name,
+        closes_at=closes_at,
+        guild_id=interaction.guild_id,
+        channel_id=interaction.channel_id,
+    )
+
+    embed = build_prediction_embed(pred)
+    view = PredictionView(pred.prediction_id)
+    view.vote_a.label = pred.option_a
+    view.vote_b.label = pred.option_b
+    msg = await interaction.followup.send(embed=embed, view=view)
+    pred.message_id = msg.id
+
+    activePredictions[pred.prediction_id] = pred
+
+    db = _require_db()
+    if db:
+        await db.create_prediction(pred)
+        await db.update_message_id(pred.prediction_id, msg.id)
+
+    asyncio.create_task(auto_close_prediction(interaction.client, pred, db))
+
+    print(f"[BETTING] Prediction {pred.prediction_id} created by {interaction.user}")
+
+
+@app_commands.checks.has_role("Founders Edition")
+@bot.tree.command(name="bet_close", description="[MOD] Resolve a prediction and award scores")
+@app_commands.describe(
+    bet_number="The bet number (shown as 'Bet #1', 'Bet #2', etc. in the embed footer)",
+    winner="Which option won",
+)
+async def bet_close(
+    interaction: discord.Interaction,
+    bet_number: int,
+    winner: str,
+):
+    await interaction.response.defer(ephemeral=True)
+
+    pred = None
+    for active_pred in activePredictions.values():
+        if active_pred.display_id == bet_number:
+            pred = active_pred
+            break
+
+    if pred is None:
+        await interaction.followup.send(
+            f"No active prediction with number `{bet_number}`. Use `/bet_list` to see active predictions.",
+            ephemeral=True,
+        )
+        return
+
+    # winner is the value "A" or "B" coming from autocomplete
+    if winner not in ("A", "B"):
+        await interaction.followup.send("Invalid option. Please select from the autocomplete suggestions.", ephemeral=True)
+        return
+
+    db = _require_db()
+    summary = await close_prediction(interaction.client, pred, winner, db)
+
+    try:
+        channel = interaction.guild.get_channel(pred.channel_id)
+        if channel:
+            await channel.send(summary)
+            await interaction.followup.send("Done!", ephemeral=True)
+        else:
+            await interaction.followup.send(summary, ephemeral=False)
+    except Exception:
+        await interaction.followup.send(summary, ephemeral=False)
+
+    print(f"[BETTING] Bet #{pred.display_id} resolved by {interaction.user} — winner: {winner}")
+
+
+@bet_close.autocomplete("winner")
+async def bet_close_winner_autocomplete(
+    interaction: discord.Interaction,
+    current: str,
+) -> list[app_commands.Choice[str]]:
+    # bet_number is usually already typed by the time they get to this field
+    bet_number = None
+    try:
+        raw = interaction.namespace.bet_number
+        if raw is not None:
+            bet_number = int(raw)
+    except (TypeError, ValueError, AttributeError):
+        pass
+
+    if bet_number is not None:
+        pred = next(
+            (p for p in activePredictions.values() if p.display_id == bet_number),
+            None,
+        )
+        if pred:
+            return [
+                app_commands.Choice(name=f"✅ {pred.option_a}", value="A"),
+                app_commands.Choice(name=f"✅ {pred.option_b}", value="B"),
+            ]
+
+    # nothing typed yet (or it didn't parse) - just dump every open bet's options
+    choices = []
+    for pred in list(activePredictions.values()):
+        if pred.status in ("open", "closed"):
+            choices.append(app_commands.Choice(name=f"#{pred.display_id} → {pred.option_a}", value="A"))
+            choices.append(app_commands.Choice(name=f"#{pred.display_id} → {pred.option_b}", value="B"))
+    if choices:
+        return choices[:25]
+
+    return [
+        app_commands.Choice(name="Option A", value="A"),
+        app_commands.Choice(name="Option B", value="B"),
+    ]
+
+
+@bot.tree.command(name="bet_list", description="Show all currently open predictions")
+async def bet_list(interaction: discord.Interaction):
+    open_preds = [p for p in activePredictions.values() if p.status in ("open", "closed")]
+
+    if not open_preds:
+        await interaction.response.send_message("No active predictions right now.", ephemeral=True)
+        return
+
+    embed = discord.Embed(title="Active Predictions", color=0x5865F2)
+    for pred in open_preds[:10]:  # max 10 in one embed
+        embed.add_field(
+            name=f"Bet #{pred.display_id} · {pred.question}",
+            value=(
+                f"{pred.option_a}: **{pred.percent_a()}%** ({pred.votes_a} votes)  "
+                f"{pred.option_b}: **{pred.percent_b()}%** ({pred.votes_b} votes)\n"
+                f"Closes: <t:{int(pred.closes_at.timestamp())}:R>"
+            ),
+            inline=False,
+        )
+    await interaction.response.send_message(embed=embed, ephemeral=True)
+
+
+@bot.tree.command(name="leaderboard", description="Show the prediction market leaderboard")
+@app_commands.describe(scope="Global all-time scores, or scores for a specific prediction ID")
+async def leaderboard(interaction: discord.Interaction, scope: str = "global"):
+    await interaction.response.defer(ephemeral=True)
+
+    db = _require_db()
+    if db is None:
+        await interaction.followup.send("Database not connected.", ephemeral=True)
+        return
+
+    scope = scope.strip().lower()
+
+    if scope == "global":
+        rows = await db.get_global_leaderboard(10)
+        if not rows:
+            await interaction.followup.send("No scores recorded yet.", ephemeral=True)
+            return
+
+        embed = discord.Embed(title="🏆 Global Leaderboard", color=0xF1C40F)
+        medals = ["🥇", "🥈", "🥉"]
+        for i, row in enumerate(rows):
+            medal = medals[i] if i < 3 else f"{i+1}."
+            score = row["global_score"]
+            accuracy = row["accuracy"]
+            total = row["total_bets"]
+            correct = row["correct_bets"]
+            embed.add_field(
+                name=f"{medal} {row['username']}",
+                value=f"**{score:+.1f} pts** — {correct}/{total} correct ({accuracy}%)",
+                inline=False,
+            )
+        await interaction.followup.send(embed=embed, ephemeral=True)
+
+    else:
+        # otherwise scope is a prediction id
+        pred = activePredictions.get(scope)
+        if pred is None:
+            pred_data = await db.get_prediction(scope)
+            if pred_data is None:
+                await interaction.followup.send(
+                    f"No prediction found with ID `{scope}`.", ephemeral=True
+                )
+                return
+            question = pred_data["question"]
+        else:
+            question = pred.question
+
+        rows = await db.get_event_leaderboard(scope, 10)
+        if not rows:
+            await interaction.followup.send("No scores for this prediction yet.", ephemeral=True)
+            return
+
+        embed = discord.Embed(
+            title=f"🏆 Prediction Leaderboard",
+            description=f"**{question}**",
+            color=0xF1C40F,
+        )
+        medals = ["🥇", "🥈", "🥉"]
+        for i, row in enumerate(rows):
+            medal = medals[i] if i < 3 else f"{i+1}."
+            correct_str = "Correct" if row["is_correct"] else "Wrong"
+            embed.add_field(
+                name=f"{medal} {row['username']}",
+                value=f"**{row['score_awarded']:+.1f} pts** — {correct_str}",
+                inline=False,
+            )
+        await interaction.followup.send(embed=embed, ephemeral=True)
+
+
+@bot.tree.command(name="my_bets", description="See your prediction history and scores")
+@app_commands.describe(member="Leave empty to check yourself, or mention another member")
+async def my_bets(interaction: discord.Interaction, member: discord.Member = None):
+    await interaction.response.defer(ephemeral=True)
+
+    db = _require_db()
+    if db is None:
+        await interaction.followup.send("Database not connected.", ephemeral=True)
+        return
+
+    target = member or interaction.user
+    stats = await db.get_user_stats(target.id)
+    bets = await db.get_user_bets(target.id, 10)
+
+    embed = discord.Embed(
+        title=f"{target.display_name}'s Predictions",
+        color=0x5865F2,
+    )
+
+    if stats:
+        accuracy = stats["accuracy"]
+        embed.add_field(
+            name="Overall Stats",
+            value=(
+                f"Score: {stats['global_score']:+.1f} pts\n"
+                f"Total bets: {stats['total_bets']}\n"
+                f"Correct: {stats['correct_bets']} ({accuracy}%)"
+            ),
+            inline=False,
+        )
+    else:
+        embed.add_field(name="Overall Stats", value="No resolved bets yet.", inline=False)
+
+    if bets:
+        history = ""
+        for bet in bets[:8]:
+            chosen = bet["option_a"] if bet["chosen_option"] == "A" else bet["option_b"]
+            if bet["is_correct"] is None:
+                result = "Pending"
+            elif bet["is_correct"]:
+                result = f"+{bet['score_awarded']:.1f}pts"
+            else:
+                result = f"{bet['score_awarded']:.1f}pts"
+            history += f"• **{bet['question'][:45]}...**\n  → {chosen} — {result}\n"
+        embed.add_field(name="Recent Bets", value=history, inline=False)
+    else:
+        embed.add_field(name="Recent Bets", value="No bets placed yet.", inline=False)
+
+    await interaction.followup.send(embed=embed, ephemeral=True)
+
+
+@app_commands.checks.has_role("Founders Edition")
+@bot.tree.command(name="bet_export", description="[MOD] Download the betting database as a file")
+async def bet_export(interaction: discord.Interaction):
+    if interaction.channel_id != BetModChannel:
+        await interaction.response.send_message(
+            f"This command can only be used in <#{BetModChannel}>.", ephemeral=True
+        )
+        return
+    if not os.path.isfile(DB_PATH):
+        await interaction.response.send_message(f"No database file found at `{DB_PATH}`.", ephemeral=True)
+        return
+    size_kb = os.path.getsize(DB_PATH) // 1024
+    await interaction.response.send_message(
+        f"Here's the current betting database (`{size_kb} KB`):",
+        file=discord.File(DB_PATH, filename="betting.db"),
+        ephemeral=True,
+    )
+
 
 async def saveSLList():
     with open('secondLookList.pkl', 'wb') as f:
