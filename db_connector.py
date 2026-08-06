@@ -1,5 +1,6 @@
 # sqlite layer for the betting stuff, uses aiosqlite so it doesn't block the event loop
 # betting.db gets created next to the bot on first run, nothing to configure
+from __future__ import annotations
 
 import os
 import aiosqlite
