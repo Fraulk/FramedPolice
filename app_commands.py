@@ -256,14 +256,6 @@ async def sync(ctx):
 async def syncbets(ctx):
     guild = discord.Object(id=GUILD_ID)
     bot.tree.clear_commands(type=discord.AppCommandType.message, guild=guild)
-    cmd = app_commands.Command(
-        name="tool",
-        description="Checks if a game has a guide, cam or works with UUU.",
-        callback=toolAC,
-    )
-    cmd.type = 4
-    cmd.handler = 2
-    bot.tree.add_command(cmd)
     await bot.tree.sync(guild=guild)
     await bot.tree.sync()
     await ctx.send("Betting slash commands synced!")
