@@ -25,6 +25,7 @@ HOFunChannel    = 1090729949448642641 if PROD else 1089893884047405086
 LogChannel      = 1445371169518915655 if PROD else 1445363741108469790
 PredictionChannel   = 1476111629287428146 if PROD else 1476111629287428146  # TODO: set to the channel where predictions are posted
 BetModChannel       = 1476111629287428146 if PROD else 1476111629287428146  # TODO: set to the mod-only channel for bet commands
+PredictionsDashboardURL = "https://framed.nairdah.me/predictions"
 ModRoles        = (1445054368989581465, 549988038516670506, 549988228737007638, 874375168204611604)  # gates !sync and !syncbets (the betting slash commands)
 
 SLDump = 997872439973400586

@@ -5,8 +5,9 @@ from discord.ext import commands
 
 from vars import *
 from functions import *
-from betting import activePredictions, build_prediction_embed, PredictionView, close_prediction, auto_close_prediction, Prediction, parse_duration
-from db_connector import betting_db, DB_PATH
+import io
+from betting import activePredictions, build_prediction_embed, PredictionView, close_prediction, auto_close_prediction, lock_prediction, Prediction, parse_duration, dashboard_link_view
+from db_connector import betting_db
 
 # OLD COMMANDS APP COMMAND EQUIVALENT >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -410,6 +411,39 @@ async def bet_create(
 
 
 @app_commands.checks.has_role("Founders Edition")
+@bot.tree.command(name="bet_lock", description="[MOD] Stop voting on a bet early, without picking a winner yet")
+@app_commands.describe(bet_number="The bet number (shown as 'Bet #1', 'Bet #2', etc.)")
+async def bet_lock(interaction: discord.Interaction, bet_number: int):
+    await interaction.response.defer(ephemeral=True)
+
+    pred = None
+    for active_pred in activePredictions.values():
+        if active_pred.display_id == bet_number:
+            pred = active_pred
+            break
+
+    if pred is None:
+        await interaction.followup.send(
+            f"No active prediction with number `{bet_number}`. Use `/bet_list` to see active predictions.",
+            ephemeral=True,
+        )
+        return
+
+    if pred.status != "open":
+        await interaction.followup.send(f"Bet #{bet_number} isn't open for voting right now.", ephemeral=True)
+        return
+
+    db = _require_db()
+    await lock_prediction(interaction.client, pred, db)
+    await interaction.followup.send(
+        f"Voting locked on Bet #{bet_number}. Use `/bet_close` when you're ready to pick a winner.",
+        ephemeral=True,
+    )
+
+    print(f"[BETTING] Bet #{pred.display_id} voting locked by {interaction.user}")
+
+
+@app_commands.checks.has_role("Founders Edition")
 @bot.tree.command(name="bet_close", description="[MOD] Resolve a prediction and award scores")
 @app_commands.describe(
     bet_number="The bet number (shown as 'Bet #1', 'Bet #2', etc. in the embed footer)",
@@ -440,18 +474,22 @@ async def bet_close(
         await interaction.followup.send("Invalid option. Please select from the autocomplete suggestions.", ephemeral=True)
         return
 
+    if pred.status == "resolved":
+        await interaction.followup.send("This prediction has already been resolved.", ephemeral=True)
+        return
+
     db = _require_db()
-    summary = await close_prediction(interaction.client, pred, winner, db)
+    result_embed = await close_prediction(interaction.client, pred, winner, db)
+    result_view = dashboard_link_view(pred.prediction_id)
 
     try:
         channel = interaction.guild.get_channel(pred.channel_id)
         if channel:
-            await channel.send(summary)
-            await interaction.followup.send("Done!", ephemeral=True)
+            await channel.send(embed=result_embed, view=result_view)
         else:
-            await interaction.followup.send(summary, ephemeral=False)
+            await interaction.followup.send(embed=result_embed, view=result_view, ephemeral=False)
     except Exception:
-        await interaction.followup.send(summary, ephemeral=False)
+        await interaction.followup.send(embed=result_embed, view=result_view, ephemeral=False)
 
     print(f"[BETTING] Bet #{pred.display_id} resolved by {interaction.user} — winner: {winner}")
 
@@ -646,13 +684,18 @@ async def bet_export(interaction: discord.Interaction):
             f"This command can only be used in <#{BetModChannel}>.", ephemeral=True
         )
         return
-    if not os.path.isfile(DB_PATH):
-        await interaction.response.send_message(f"No database file found at `{DB_PATH}`.", ephemeral=True)
+
+    await interaction.response.defer(ephemeral=True)
+    dump = await betting_db.export_all()
+    if dump is None:
+        await interaction.followup.send("Couldn't reach the database.", ephemeral=True)
         return
-    size_kb = os.path.getsize(DB_PATH) // 1024
-    await interaction.response.send_message(
-        f"Here's the current betting database (`{size_kb} KB`):",
-        file=discord.File(DB_PATH, filename="betting.db"),
+
+    buffer = io.BytesIO(json.dumps(dump, indent=2).encode("utf-8"))
+    size_kb = buffer.getbuffer().nbytes // 1024
+    await interaction.followup.send(
+        f"Here's the current betting data (`{size_kb} KB`):",
+        file=discord.File(buffer, filename="betting_export.json"),
         ephemeral=True,
     )
 

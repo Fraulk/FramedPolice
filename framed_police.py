@@ -29,14 +29,14 @@ async def on_ready():
     print("[LOGGER] Log buffer up and running")
     await log_info("Bot is ready")
 
-    # Connect to betting SQLite DB
+    # Connect to the betting DB (PocketBase, over HTTP)
     connected = await betting_db.connect()
     if connected:
-        await log_info("[BETTING] SQLite connected")
+        await log_info("[BETTING] PocketBase connected")
         await initialize_display_id_counter(betting_db)
         await restore_active_predictions(bot, betting_db)
     else:
-        await log_info("[BETTING] SQLite not available — bets will work in-memory only (no scores persisted)")
+        await log_info("[BETTING] PocketBase not available — bets will work in-memory only (no scores persisted)")
         await initialize_display_id_counter(None)
     
     if not os.path.isfile('./tempBingo.png'):
