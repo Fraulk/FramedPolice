@@ -26,6 +26,7 @@ def _parse_pb_dt(raw: str) -> datetime.datetime:
 
 
 def _clean_dt_str(raw: str | None) -> str | None:
+    if not raw:
         return None
     return _parse_pb_dt(raw).isoformat()
 
@@ -229,5 +230,6 @@ class BettingDB:
         if not self.is_connected():
             return None
         return await self._get("/api/betting/export")
+
 
 betting_db = BettingDB()
