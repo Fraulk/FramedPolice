@@ -1,404 +1,233 @@
-# sqlite layer for the betting stuff, uses aiosqlite so it doesn't block the event loop
-# betting.db gets created next to the bot on first run, nothing to configure
+# talks to the PocketBase instance on Coolify that actually holds the betting data.
+# used to be a local sqlite file, now it's just an HTTP client - same class/method
 from __future__ import annotations
 
 import os
-import aiosqlite
 import datetime
-from contextlib import asynccontextmanager
+import aiohttp
 from logger import log_info, log_error
 
-
-DB_PATH = os.path.abspath(os.getenv("DB_PATH", "./betting.db"))
-
-_CREATE_TABLES = [
-    """
-    CREATE TABLE IF NOT EXISTS predictions (
-        prediction_id   TEXT PRIMARY KEY,
-        display_id      INTEGER UNIQUE NOT NULL,
-        creator_id      INTEGER NOT NULL,
-        creator_name    TEXT NOT NULL,
-        question        TEXT NOT NULL,
-        description     TEXT NOT NULL DEFAULT '',
-        option_a        TEXT NOT NULL DEFAULT 'YES',
-        option_b        TEXT NOT NULL DEFAULT 'NO',
-        created_at      TEXT NOT NULL,
-        closes_at       TEXT NOT NULL,
-        duration_minutes INTEGER NOT NULL DEFAULT 1440,
-        status          TEXT NOT NULL DEFAULT 'open',
-        winner          TEXT,
-        message_id      INTEGER,
-        channel_id      INTEGER,
-        guild_id        INTEGER
-    )
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS prediction_votes (
-        vote_id         INTEGER PRIMARY KEY AUTOINCREMENT,
-        prediction_id   TEXT NOT NULL REFERENCES predictions(prediction_id) ON DELETE CASCADE,
-        user_id         INTEGER NOT NULL,
-        username        TEXT,
-        chosen_option   TEXT NOT NULL,
-        placed_at       TEXT NOT NULL,
-        is_correct      INTEGER,
-        score_awarded   REAL,
-        UNIQUE (prediction_id, user_id)
-    )
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS user_scores (
-        user_id         INTEGER PRIMARY KEY,
-        username        TEXT NOT NULL,
-        global_score    REAL NOT NULL DEFAULT 0,
-        total_bets      INTEGER NOT NULL DEFAULT 0,
-        correct_bets    INTEGER NOT NULL DEFAULT 0,
-        last_updated    TEXT NOT NULL
-    )
-    """,
-]
+POCKETBASE_URL = os.getenv("POCKETBASE_URL", "").rstrip("/")
+BETTING_API_TOKEN = os.getenv("BETTING_API_TOKEN", "")
 
 
 def _now_iso() -> str:
     return datetime.datetime.now(datetime.timezone.utc).isoformat()
 
 
-@asynccontextmanager
-async def _get_conn():
-    async with aiosqlite.connect(DB_PATH) as conn:
-        conn.row_factory = aiosqlite.Row
-        await conn.execute("PRAGMA journal_mode=WAL")
-        await conn.execute("PRAGMA foreign_keys=ON")
-        yield conn
+def _parse_pb_dt(raw: str) -> datetime.datetime:
+    raw = raw.strip().replace("Z", "+00:00").replace(" ", "T")
+    if "." in raw:
+        head, _, rest = raw.partition(".")
+        frac, plus, tz = rest.partition("+")
+        frac = (frac + "000000")[:6]
+        raw = f"{head}.{frac}+{tz}" if plus else f"{head}.{frac}"
+    return datetime.datetime.fromisoformat(raw)
+
+
+def _clean_dt_str(raw: str | None) -> str | None:
+        return None
+    return _parse_pb_dt(raw).isoformat()
+
+
+def _to_int(raw) -> int | None:
+    if raw is None or raw == "":
+        return None
+    return int(raw)
+
+
+def _normalize_prediction(row: dict) -> dict:
+    row = dict(row)
+    row["creator_id"] = _to_int(row.get("creator_id"))
+    row["message_id"] = _to_int(row.get("message_id"))
+    row["channel_id"] = _to_int(row.get("channel_id"))
+    row["guild_id"] = _to_int(row.get("guild_id"))
+    row["created_at"] = _clean_dt_str(row.get("created_at"))
+    row["closes_at"] = _clean_dt_str(row.get("closes_at"))
+    row["winner"] = row.get("winner") or None
+    return row
+
+
+def _normalize_vote(row: dict) -> dict:
+    row = dict(row)
+    row["user_id"] = _to_int(row.get("user_id"))
+    return row
+
+
+def _normalize_score(row: dict) -> dict:
+    row = dict(row)
+    row["user_id"] = _to_int(row.get("user_id"))
+    return row
 
 
 class BettingDB:
     def __init__(self):
         self._ready: bool = False
+        self._session: aiohttp.ClientSession | None = None
 
-    async def connect(self):
-        try:
-            async with _get_conn() as conn:
-                for sql in _CREATE_TABLES:
-                    await conn.execute(sql)
-                await conn.commit()
-            self._ready = True
-            await log_info(f"[DB] SQLite database ready at {DB_PATH}")
-            return True
-        except Exception as e:
-            await log_error(f"[DB] Failed to initialise SQLite: {e}")
+    async def connect(self) -> bool:
+        if not POCKETBASE_URL or not BETTING_API_TOKEN:
+            await log_error("[DB] POCKETBASE_URL / BETTING_API_TOKEN not set in .env")
             self._ready = False
             return False
+
+        self._session = aiohttp.ClientSession(
+            base_url=POCKETBASE_URL,
+            headers={"Authorization": f"Bearer {BETTING_API_TOKEN}"},
+            timeout=aiohttp.ClientTimeout(total=10),
+        )
+        try:
+            async with self._session.get("/api/health") as resp:
+                self._ready = resp.status == 200
+        except Exception as e:
+            await log_error(f"[DB] Can't reach PocketBase at {POCKETBASE_URL}: {e}")
+            self._ready = False
+
+        if self._ready:
+            await log_info(f"[DB] Connected to PocketBase at {POCKETBASE_URL}")
+        return self._ready
 
     def is_connected(self) -> bool:
         return self._ready
 
+    async def _get(self, path: str, **params):
+        try:
+            async with self._session.get(path, params=params) as resp:
+                if resp.status >= 400:
+                    await log_error(f"[DB] GET {path} -> {resp.status}: {await resp.text()}")
+                    return None
+                return await resp.json()
+        except Exception as e:
+            await log_error(f"[DB] GET {path} failed: {e}")
+            return None
+
+    async def _send(self, method: str, path: str, body: dict | None = None) -> bool:
+        try:
+            async with self._session.request(method, path, json=body) as resp:
+                if resp.status >= 400:
+                    await log_error(f"[DB] {method} {path} -> {resp.status}: {await resp.text()}")
+                    return False
+                return True
+        except Exception as e:
+            await log_error(f"[DB] {method} {path} failed: {e}")
+            return False
+
+    # ─── writes ─────────────────────────────────────────────────────────
+
     async def create_prediction(self, pred) -> bool:
         if not self.is_connected():
             return False
-        try:
-            async with _get_conn() as conn:
-                await conn.execute(
-                    """
-                    INSERT INTO predictions
-                        (prediction_id, display_id, creator_id, creator_name, question, description,
-                         option_a, option_b, created_at, closes_at, duration_minutes, message_id, channel_id, guild_id)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    (
-                        pred.prediction_id,
-                        pred.display_id,
-                        pred.creator_id,
-                        pred.creator_name,
-                        pred.question,
-                        pred.description or "",
-                        pred.option_a,
-                        pred.option_b,
-                        pred.created_at.isoformat(),
-                        pred.closes_at.isoformat(),
-                        pred.duration_minutes,
-                        pred.message_id,
-                        pred.channel_id,
-                        pred.guild_id,
-                    ),
-                )
-                await conn.commit()
-            return True
-        except Exception as e:
-            await log_error(f"[DB] create_prediction failed: {e}")
-            return False
+        return await self._send("POST", "/api/betting/predictions", {
+            "prediction_id": pred.prediction_id,
+            "display_id": pred.display_id,
+            "creator_id": str(pred.creator_id),
+            "creator_name": pred.creator_name,
+            "question": pred.question,
+            "description": pred.description or "",
+            "option_a": pred.option_a,
+            "option_b": pred.option_b,
+            "created_at": pred.created_at.isoformat(),
+            "closes_at": pred.closes_at.isoformat(),
+            "duration_minutes": pred.duration_minutes,
+            "message_id": str(pred.message_id) if pred.message_id else None,
+            "channel_id": str(pred.channel_id),
+            "guild_id": str(pred.guild_id),
+        })
 
     async def update_message_id(self, prediction_id: str, message_id: int):
         if not self.is_connected():
             return
-        try:
-            async with _get_conn() as conn:
-                await conn.execute(
-                    "UPDATE predictions SET message_id = ? WHERE prediction_id = ?",
-                    (message_id, prediction_id),
-                )
-                await conn.commit()
-        except Exception as e:
-            await log_error(f"[DB] update_message_id failed: {e}")
+        await self._send("PATCH", f"/api/betting/predictions/{prediction_id}/message", {"message_id": str(message_id)})
 
     async def close_prediction(self, prediction_id: str):
         if not self.is_connected():
             return
-        try:
-            async with _get_conn() as conn:
-                await conn.execute(
-                    "UPDATE predictions SET status = 'closed' WHERE prediction_id = ?",
-                    (prediction_id,),
-                )
-                await conn.commit()
-        except Exception as e:
-            await log_error(f"[DB] close_prediction failed: {e}")
+        await self._send("POST", f"/api/betting/predictions/{prediction_id}/close")
 
-    async def resolve_prediction(
-        self, prediction_id: str, winner: str, scores: dict[int, float]
-    ):
+    async def resolve_prediction(self, prediction_id: str, winner: str, scores: dict[int, float]):
         if not self.is_connected():
             return
-        try:
-            async with _get_conn() as conn:
-                await conn.execute(
-                    "UPDATE predictions SET status='resolved', winner=? WHERE prediction_id=?",
-                    (winner, prediction_id),
-                )
-                now = _now_iso()
-                for user_id, score in scores.items():
-                    is_correct = 1 if score > 0 else 0
-                    await conn.execute(
-                        """
-                        UPDATE prediction_votes
-                        SET is_correct = ?, score_awarded = ?
-                        WHERE prediction_id = ? AND user_id = ?
-                        """,
-                        (is_correct, score, prediction_id, user_id),
-                    )
-                    cursor = await conn.execute(
-                        "SELECT username FROM prediction_votes WHERE user_id = ? LIMIT 1",
-                        (user_id,),
-                    )
-                    row = await cursor.fetchone()
-                    username = row["username"] if row else str(user_id)
-                    await conn.execute(
-                        """
-                        INSERT INTO user_scores (user_id, username, global_score, total_bets, correct_bets, last_updated)
-                        VALUES (?, ?, ?, 1, ?, ?)
-                        ON CONFLICT (user_id) DO UPDATE SET
-                            global_score = user_scores.global_score + excluded.global_score,
-                            total_bets   = user_scores.total_bets + 1,
-                            correct_bets = user_scores.correct_bets + excluded.correct_bets,
-                            last_updated = excluded.last_updated
-                        """,
-                        (user_id, username, score, is_correct, now),
-                    )
-                await conn.commit()
-        except Exception as e:
-            await log_error(f"[DB] resolve_prediction failed: {e}")
+        await self._send("POST", f"/api/betting/predictions/{prediction_id}/resolve", {
+            "winner": winner,
+            "scores": {str(user_id): score for user_id, score in scores.items()},
+        })
 
-    async def record_vote(
-        self, prediction_id: str, user_id: int, username: str, choice: str
-    ):
+    async def record_vote(self, prediction_id: str, user_id: int, username: str, choice: str):
         if not self.is_connected():
             return
-        try:
-            async with _get_conn() as conn:
-                await conn.execute(
-                    """
-                    INSERT INTO prediction_votes (prediction_id, user_id, username, chosen_option, placed_at)
-                    VALUES (?, ?, ?, ?, ?)
-                    ON CONFLICT (prediction_id, user_id) DO UPDATE SET
-                        chosen_option = excluded.chosen_option,
-                        placed_at     = excluded.placed_at,
-                        username      = excluded.username
-                    """,
-                    (prediction_id, user_id, username, choice, _now_iso()),
-                )
-                await conn.commit()
-        except Exception as e:
-            await log_error(f"[DB] record_vote failed: {e}")
+        await self._send("POST", f"/api/betting/predictions/{prediction_id}/votes", {
+            "user_id": str(user_id),
+            "username": username,
+            "choice": choice,
+            "placed_at": _now_iso(),
+        })
+
+    # ─── reads ──────────────────────────────────────────────────────────
 
     async def get_open_predictions(self) -> list[dict]:
         if not self.is_connected():
             return []
-        try:
-            async with _get_conn() as conn:
-                cursor = await conn.execute(
-                    "SELECT * FROM predictions WHERE status IN ('open','closed') ORDER BY created_at DESC"
-                )
-                rows = await cursor.fetchall()
-                return [dict(r) for r in rows]
-        except Exception as e:
-            await log_error(f"[DB] get_open_predictions failed: {e}")
-            return []
+        rows = await self._get("/api/betting/predictions")
+        return [_normalize_prediction(r) for r in rows] if rows else []
 
     async def get_prediction(self, prediction_id: str) -> dict | None:
         if not self.is_connected():
             return None
-        try:
-            async with _get_conn() as conn:
-                cursor = await conn.execute(
-                    "SELECT * FROM predictions WHERE prediction_id = ?", (prediction_id,)
-                )
-                row = await cursor.fetchone()
-                return dict(row) if row else None
-        except Exception as e:
-            await log_error(f"[DB] get_prediction failed: {e}")
-            return None
+        row = await self._get(f"/api/betting/predictions/{prediction_id}")
+        return _normalize_prediction(row) if row else None
 
     async def get_global_leaderboard(self, limit: int = 10) -> list[dict]:
         if not self.is_connected():
             return []
-        try:
-            async with _get_conn() as conn:
-                cursor = await conn.execute(
-                    """
-                    SELECT user_id, username, global_score, total_bets, correct_bets,
-                           CASE WHEN total_bets > 0
-                                THEN ROUND(CAST(correct_bets AS REAL) / total_bets * 100, 1)
-                                ELSE 0 END AS accuracy
-                    FROM user_scores
-                    ORDER BY global_score DESC
-                    LIMIT ?
-                    """,
-                    (limit,),
-                )
-                rows = await cursor.fetchall()
-                return [dict(r) for r in rows]
-        except Exception as e:
-            await log_error(f"[DB] get_global_leaderboard failed: {e}")
-            return []
+        rows = await self._get("/api/betting/leaderboard/global", limit=limit)
+        return [_normalize_score(r) for r in rows] if rows else []
 
     async def get_event_leaderboard(self, prediction_id: str, limit: int = 10) -> list[dict]:
         if not self.is_connected():
             return []
-        try:
-            async with _get_conn() as conn:
-                cursor = await conn.execute(
-                    """
-                    SELECT user_id, username, score_awarded, is_correct
-                    FROM prediction_votes
-                    WHERE prediction_id = ? AND score_awarded IS NOT NULL
-                    ORDER BY score_awarded DESC
-                    LIMIT ?
-                    """,
-                    (prediction_id, limit),
-                )
-                rows = await cursor.fetchall()
-                return [dict(r) for r in rows]
-        except Exception as e:
-            await log_error(f"[DB] get_event_leaderboard failed: {e}")
-            return []
+        rows = await self._get(f"/api/betting/predictions/{prediction_id}/leaderboard", limit=limit)
+        return [_normalize_vote(r) for r in rows] if rows else []
 
     async def get_user_stats(self, user_id: int) -> dict | None:
         if not self.is_connected():
             return None
-        try:
-            async with _get_conn() as conn:
-                cursor = await conn.execute(
-                    """
-                    SELECT *,
-                           CASE WHEN total_bets > 0
-                                THEN ROUND(CAST(correct_bets AS REAL) / total_bets * 100, 1)
-                                ELSE 0 END AS accuracy
-                    FROM user_scores
-                    WHERE user_id = ?
-                    """,
-                    (user_id,),
-                )
-                row = await cursor.fetchone()
-                return dict(row) if row else None
-        except Exception as e:
-            await log_error(f"[DB] get_user_stats failed: {e}")
-            return None
+        row = await self._get(f"/api/betting/users/{user_id}/stats")
+        return _normalize_score(row) if row else None
 
     async def get_user_bets(self, user_id: int, limit: int = 10) -> list[dict]:
         if not self.is_connected():
             return []
-        try:
-            async with _get_conn() as conn:
-                cursor = await conn.execute(
-                    """
-                    SELECT pv.*, p.question, p.option_a, p.option_b, p.status, p.winner
-                    FROM prediction_votes pv
-                    JOIN predictions p ON p.prediction_id = pv.prediction_id
-                    WHERE pv.user_id = ?
-                    ORDER BY pv.placed_at DESC
-                    LIMIT ?
-                    """,
-                    (user_id, limit),
-                )
-                rows = await cursor.fetchall()
-                return [dict(r) for r in rows]
-        except Exception as e:
-            await log_error(f"[DB] get_user_bets failed: {e}")
-            return []
+        rows = await self._get(f"/api/betting/users/{user_id}/bets", limit=limit)
+        return [_normalize_vote(r) for r in rows] if rows else []
 
     async def get_bet_participants(self, prediction_id: str) -> list[dict]:
         if not self.is_connected():
             return []
-        try:
-            async with _get_conn() as conn:
-                cursor = await conn.execute(
-                    """
-                    SELECT
-                        pv.user_id,
-                        pv.username,
-                        pv.chosen_option,
-                        p.option_a,
-                        p.option_b,
-                        pv.score_awarded,
-                        pv.is_correct,
-                        pv.placed_at
-                    FROM prediction_votes pv
-                    JOIN predictions p ON p.prediction_id = pv.prediction_id
-                    WHERE pv.prediction_id = ?
-                    ORDER BY pv.placed_at ASC
-                    """,
-                    (prediction_id,),
-                )
-                rows = await cursor.fetchall()
-                return [dict(r) for r in rows]
-        except Exception as e:
-            await log_error(f"[DB] get_bet_participants failed: {e}")
-            return []
+        rows = await self._get(f"/api/betting/predictions/{prediction_id}/participants")
+        return [_normalize_vote(r) for r in rows] if rows else []
 
     async def get_max_display_id(self) -> int:
         if not self.is_connected():
             return 0
-        try:
-            async with _get_conn() as conn:
-                cursor = await conn.execute("SELECT COALESCE(MAX(display_id), 0) FROM predictions")
-                row = await cursor.fetchone()
-                return row[0] if row else 0
-        except Exception as e:
-            await log_error(f"[DB] get_max_display_id failed: {e}")
-            return 0
+        row = await self._get("/api/betting/max-display-id")
+        return row["max_display_id"] if row else 0
 
     async def get_unresolved_predictions(self) -> list[dict]:
-        # grabs everything still open/closed plus their votes, used on startup to rebuild state in memory
         if not self.is_connected():
             return []
-        try:
-            async with _get_conn() as conn:
-                cursor = await conn.execute(
-                    "SELECT * FROM predictions WHERE status IN ('open', 'closed') ORDER BY created_at ASC"
-                )
-                preds = [dict(r) for r in await cursor.fetchall()]
-
-                for pred in preds:
-                    cursor = await conn.execute(
-                        "SELECT user_id, chosen_option FROM prediction_votes WHERE prediction_id = ?",
-                        (pred["prediction_id"],),
-                    )
-                    pred["votes"] = {row["user_id"]: row["chosen_option"] for row in await cursor.fetchall()}
-
-                return preds
-        except Exception as e:
-            await log_error(f"[DB] get_unresolved_predictions failed: {e}")
+        rows = await self._get("/api/betting/unresolved-predictions")
+        if not rows:
             return []
+        out = []
+        for raw in rows:
+            pred = _normalize_prediction(raw)
+            pred["votes"] = {int(uid): choice for uid, choice in raw.get("votes", {}).items()}
+            out.append(pred)
+        return out
 
+    async def export_all(self) -> dict | None:
+        if not self.is_connected():
+            return None
+        return await self._get("/api/betting/export")
 
-# single shared instance, app_commands and betting both import this
 betting_db = BettingDB()

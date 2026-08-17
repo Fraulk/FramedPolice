@@ -8,6 +8,7 @@ import discord
 
 from logger import log_info, log_error
 from db_connector import betting_db
+from vars import PredictionsDashboardURL
 
 _DURATION_RE = re.compile(r"(\d+(?:\.\d+)?)\s*([a-z]*)")
 
@@ -244,12 +245,12 @@ def build_prediction_embed(pred: Prediction) -> discord.Embed:
     pct_a = pred.percent_a()
     pct_b = pred.percent_b()
 
-    # bar stays all white with no votes, otherwise fills green for whichever side is ahead
+    # 16 squares instead of 20 so the row doesn't wrap on mobile
     if pred.total_votes == 0:
-        bar = "⬜" * 20
+        bar = "⬜" * 16
     else:
-        bar_filled = int(max(pct_a, pct_b) / 100 * 20)
-        bar = "🟩" * bar_filled + "⬜" * (20 - bar_filled)
+        bar_filled = int(max(pct_a, pct_b) / 100 * 16)
+        bar = "🟩" * bar_filled + "⬜" * (16 - bar_filled)
 
     odds_a = pred.odds_a()
     odds_b = pred.odds_b()
@@ -275,6 +276,16 @@ def build_prediction_embed(pred: Prediction) -> discord.Embed:
     embed.add_field(name="Status", value=status_str, inline=False)
 
     return embed
+
+
+def dashboard_link_view(prediction_id: str) -> discord.ui.View:
+    view = discord.ui.View()
+    view.add_item(discord.ui.Button(
+        label="View on Dashboard",
+        style=discord.ButtonStyle.link,
+        url=f"{PredictionsDashboardURL}/{prediction_id}",
+    ))
+    return view
 
 
 class PredictionView(discord.ui.View):
@@ -387,11 +398,8 @@ async def _schedule_embed_update(client: discord.Client, pred: Prediction):
 
 async def close_prediction(
     client: discord.Client, pred: Prediction, winner: str, db
-) -> str:
-    # resolves the bet, hands out scores, edits the embed one last time, returns a summary to post
-    if pred.status == "resolved":
-        return "This prediction has already been resolved."
-
+) -> discord.Embed:
+    # resolves the bet, hands out scores, edits the embed one last time, returns a results embed to post
     pred.status = "resolved"
     pred.winner = winner
 
@@ -410,52 +418,58 @@ async def close_prediction(
         if channel and pred.message_id:
             message = await channel.fetch_message(pred.message_id)
             embed = build_prediction_embed(pred)
-            await message.edit(embed=embed, view=discord.ui.View())  # remove buttons
+            await message.edit(embed=embed, view=dashboard_link_view(pred.prediction_id))
     except Exception as e:
         await log_error(f"[BETTING] Failed to update embed on close: {e}")
 
     correct_count = sum(1 for v in pred.votes.values() if v == winner)
     wrong_count = pred.total_votes - correct_count
 
-    summary = (
-        f"Prediction resolved!\n"
-        f"**{pred.question}**\n"
-        f"Winner: **{winner_label}**\n\n"
-        f"**{correct_count}** correct predictions, **{wrong_count}** incorrect.\n"
+    result_embed = discord.Embed(
+        title="Prediction resolved!",
+        description=f"**{pred.question}**",
+        color=0x57F287,
     )
+    result_embed.add_field(name="Winner", value=f"**{winner_label}**", inline=True)
+    result_embed.add_field(
+        name="Results",
+        value=f"**{correct_count}** correct • **{wrong_count}** incorrect",
+        inline=True,
+    )
+    result_embed.set_footer(text=f"Bet #{pred.display_id}")
 
-    if scores:
-        best_score = max(scores.values())
-        summary += f"Top score this round: **{best_score} pts**"
-
-    return summary
+    return result_embed
 
 
-async def auto_close_prediction(client: discord.Client, pred: Prediction, db):
-    # sleeps until closes_at, then flips status to closed so it's awaiting a mod to resolve it
-    now = datetime.datetime.now(datetime.timezone.utc)
-    wait_secs = (pred.closes_at - now).total_seconds()
-    if wait_secs > 0:
-        await asyncio.sleep(wait_secs)
-
-    if pred.status != "open":
-        return  # already resolved or closed manually
-
+async def lock_prediction(client: discord.Client, pred: Prediction, db):
+    # stops voting without picking a winner - status goes to "closed", awaiting /bet_close later
     pred.status = "closed"
-    await log_info(f"[BETTING] Prediction {pred.prediction_id} voting window expired")
+    await log_info(f"[BETTING] Prediction {pred.prediction_id} voting locked")
 
     try:
         channel = client.get_channel(pred.channel_id)
         if channel and pred.message_id:
             message = await channel.fetch_message(pred.message_id)
             embed = build_prediction_embed(pred)
-            # Keep buttons disabled but visible
-            await message.edit(embed=embed, view=discord.ui.View())
+            await message.edit(embed=embed, view=dashboard_link_view(pred.prediction_id))
     except Exception as e:
-        await log_error(f"[BETTING] Failed to update embed on auto-close: {e}")
+        await log_error(f"[BETTING] Failed to update embed on lock: {e}")
 
     if db is not None:
         try:
             await db.close_prediction(pred.prediction_id)
         except Exception as e:
-            await log_error(f"[BETTING] DB error on auto-close: {e}")
+            await log_error(f"[BETTING] DB error on lock: {e}")
+
+
+async def auto_close_prediction(client: discord.Client, pred: Prediction, db):
+    # sleeps until closes_at, then locks voting the same way /bet_lock would, unless it's already been handled
+    now = datetime.datetime.now(datetime.timezone.utc)
+    wait_secs = (pred.closes_at - now).total_seconds()
+    if wait_secs > 0:
+        await asyncio.sleep(wait_secs)
+
+    if pred.status != "open":
+        return  # already resolved or locked manually
+
+    await lock_prediction(client, pred, db)
