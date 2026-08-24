@@ -259,7 +259,7 @@ async def syncbets(ctx):
     bot.tree.clear_commands(type=discord.AppCommandType.message, guild=guild)
     await bot.tree.sync(guild=guild)
     await bot.tree.sync()
-    await ctx.send("Betting slash commands synced!")
+    await ctx.send("Prediction slash commands synced!")
 
 @bot.tree.context_menu(name='Add to your second look list')
 async def addSLList(interaction: discord.Interaction, message: discord.Message):
@@ -348,8 +348,21 @@ def _require_db():
     return betting_db if betting_db.is_connected() else None
 
 
+def in_prediction_channel():
+    # gates every betting command to the one channel they're meant to be used in
+    async def predicate(interaction: discord.Interaction) -> bool:
+        if interaction.channel_id != PredictionChannel:
+            await interaction.response.send_message(
+                f"Prediction commands only work in <#{PredictionChannel}>.", ephemeral=True
+            )
+            return False
+        return True
+    return app_commands.check(predicate)
+
+
 @app_commands.checks.has_role("Founders Edition")
-@bot.tree.command(name="bet_create", description="[MOD] Create a new prediction market bet")
+@in_prediction_channel()
+@bot.tree.command(name="bet_create", description="[MOD] Create a new prediction market")
 @app_commands.describe(
     question="The prediction question, e.g. 'Will Bloodborne PC be announced?'",
     description="Optional extra context or rules",
@@ -411,7 +424,8 @@ async def bet_create(
 
 
 @app_commands.checks.has_role("Founders Edition")
-@bot.tree.command(name="bet_lock", description="[MOD] Stop voting on a bet early, without picking a winner yet")
+@in_prediction_channel()
+@bot.tree.command(name="bet_lock", description="[MOD] Stop voting on a prediction early, without picking a winner yet")
 @app_commands.describe(bet_number="The bet number (shown as 'Bet #1', 'Bet #2', etc.)")
 async def bet_lock(interaction: discord.Interaction, bet_number: int):
     await interaction.response.defer(ephemeral=True)
@@ -436,7 +450,7 @@ async def bet_lock(interaction: discord.Interaction, bet_number: int):
     db = _require_db()
     await lock_prediction(interaction.client, pred, db)
     await interaction.followup.send(
-        f"Voting locked on Bet #{bet_number}. Use `/bet_close` when you're ready to pick a winner.",
+        f"Voting locked on Prediction #{bet_number}. Use `/bet_close` when you're ready to pick a winner.",
         ephemeral=True,
     )
 
@@ -444,6 +458,7 @@ async def bet_lock(interaction: discord.Interaction, bet_number: int):
 
 
 @app_commands.checks.has_role("Founders Edition")
+@in_prediction_channel()
 @bot.tree.command(name="bet_close", description="[MOD] Resolve a prediction and award scores")
 @app_commands.describe(
     bet_number="The bet number (shown as 'Bet #1', 'Bet #2', etc. in the embed footer)",
@@ -534,6 +549,7 @@ async def bet_close_winner_autocomplete(
     ]
 
 
+@in_prediction_channel()
 @bot.tree.command(name="bet_list", description="Show all currently open predictions")
 async def bet_list(interaction: discord.Interaction):
     open_preds = [p for p in activePredictions.values() if p.status in ("open", "closed")]
@@ -545,7 +561,7 @@ async def bet_list(interaction: discord.Interaction):
     embed = discord.Embed(title="Active Predictions", color=0x5865F2)
     for pred in open_preds[:10]:  # max 10 in one embed
         embed.add_field(
-            name=f"Bet #{pred.display_id} · {pred.question}",
+            name=f"Prediction #{pred.display_id} · {pred.question}",
             value=(
                 f"{pred.option_a}: **{pred.percent_a()}%** ({pred.votes_a} votes)  "
                 f"{pred.option_b}: **{pred.percent_b()}%** ({pred.votes_b} votes)\n"
@@ -556,6 +572,7 @@ async def bet_list(interaction: discord.Interaction):
     await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
+@in_prediction_channel()
 @bot.tree.command(name="leaderboard", description="Show the prediction market leaderboard")
 @app_commands.describe(scope="Global all-time scores, or scores for a specific prediction ID")
 async def leaderboard(interaction: discord.Interaction, scope: str = "global"):
@@ -625,6 +642,7 @@ async def leaderboard(interaction: discord.Interaction, scope: str = "global"):
         await interaction.followup.send(embed=embed, ephemeral=True)
 
 
+@in_prediction_channel()
 @bot.tree.command(name="my_bets", description="See your prediction history and scores")
 @app_commands.describe(member="Leave empty to check yourself, or mention another member")
 async def my_bets(interaction: discord.Interaction, member: discord.Member = None):
@@ -650,13 +668,13 @@ async def my_bets(interaction: discord.Interaction, member: discord.Member = Non
             name="Overall Stats",
             value=(
                 f"Score: {stats['global_score']:+.1f} pts\n"
-                f"Total bets: {stats['total_bets']}\n"
+                f"Total predictions: {stats['total_bets']}\n"
                 f"Correct: {stats['correct_bets']} ({accuracy}%)"
             ),
             inline=False,
         )
     else:
-        embed.add_field(name="Overall Stats", value="No resolved bets yet.", inline=False)
+        embed.add_field(name="Overall Stats", value="No resolved predictions yet.", inline=False)
 
     if bets:
         history = ""
@@ -669,15 +687,15 @@ async def my_bets(interaction: discord.Interaction, member: discord.Member = Non
             else:
                 result = f"{bet['score_awarded']:.1f}pts"
             history += f"• **{bet['question'][:45]}...**\n  → {chosen} — {result}\n"
-        embed.add_field(name="Recent Bets", value=history, inline=False)
+        embed.add_field(name="Recent Predictions", value=history, inline=False)
     else:
-        embed.add_field(name="Recent Bets", value="No bets placed yet.", inline=False)
+        embed.add_field(name="Recent Predictions", value="No predictions placed yet.", inline=False)
 
     await interaction.followup.send(embed=embed, ephemeral=True)
 
 
 @app_commands.checks.has_role("Founders Edition")
-@bot.tree.command(name="bet_export", description="[MOD] Download the betting database as a file")
+@bot.tree.command(name="bet_export", description="[MOD] Download the prediction database as a file")
 async def bet_export(interaction: discord.Interaction):
     if interaction.channel_id != BetModChannel:
         await interaction.response.send_message(
@@ -694,8 +712,8 @@ async def bet_export(interaction: discord.Interaction):
     buffer = io.BytesIO(json.dumps(dump, indent=2).encode("utf-8"))
     size_kb = buffer.getbuffer().nbytes // 1024
     await interaction.followup.send(
-        f"Here's the current betting data (`{size_kb} KB`):",
-        file=discord.File(buffer, filename="betting_export.json"),
+        f"Here's the current prediction data (`{size_kb} KB`):",
+        file=discord.File(buffer, filename="predictions_export.json"),
         ephemeral=True,
     )
 
