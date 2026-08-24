@@ -348,7 +348,20 @@ def _require_db():
     return betting_db if betting_db.is_connected() else None
 
 
+def in_prediction_channel():
+    # gates every betting command to the one channel they're meant to be used in
+    async def predicate(interaction: discord.Interaction) -> bool:
+        if interaction.channel_id != PredictionChannel:
+            await interaction.response.send_message(
+                f"Betting commands only work in <#{PredictionChannel}>.", ephemeral=True
+            )
+            return False
+        return True
+    return app_commands.check(predicate)
+
+
 @app_commands.checks.has_role("Founders Edition")
+@in_prediction_channel()
 @bot.tree.command(name="bet_create", description="[MOD] Create a new prediction market bet")
 @app_commands.describe(
     question="The prediction question, e.g. 'Will Bloodborne PC be announced?'",
@@ -411,6 +424,7 @@ async def bet_create(
 
 
 @app_commands.checks.has_role("Founders Edition")
+@in_prediction_channel()
 @bot.tree.command(name="bet_lock", description="[MOD] Stop voting on a bet early, without picking a winner yet")
 @app_commands.describe(bet_number="The bet number (shown as 'Bet #1', 'Bet #2', etc.)")
 async def bet_lock(interaction: discord.Interaction, bet_number: int):
@@ -444,6 +458,7 @@ async def bet_lock(interaction: discord.Interaction, bet_number: int):
 
 
 @app_commands.checks.has_role("Founders Edition")
+@in_prediction_channel()
 @bot.tree.command(name="bet_close", description="[MOD] Resolve a prediction and award scores")
 @app_commands.describe(
     bet_number="The bet number (shown as 'Bet #1', 'Bet #2', etc. in the embed footer)",
@@ -534,6 +549,7 @@ async def bet_close_winner_autocomplete(
     ]
 
 
+@in_prediction_channel()
 @bot.tree.command(name="bet_list", description="Show all currently open predictions")
 async def bet_list(interaction: discord.Interaction):
     open_preds = [p for p in activePredictions.values() if p.status in ("open", "closed")]
@@ -556,6 +572,7 @@ async def bet_list(interaction: discord.Interaction):
     await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
+@in_prediction_channel()
 @bot.tree.command(name="leaderboard", description="Show the prediction market leaderboard")
 @app_commands.describe(scope="Global all-time scores, or scores for a specific prediction ID")
 async def leaderboard(interaction: discord.Interaction, scope: str = "global"):
@@ -625,6 +642,7 @@ async def leaderboard(interaction: discord.Interaction, scope: str = "global"):
         await interaction.followup.send(embed=embed, ephemeral=True)
 
 
+@in_prediction_channel()
 @bot.tree.command(name="my_bets", description="See your prediction history and scores")
 @app_commands.describe(member="Leave empty to check yourself, or mention another member")
 async def my_bets(interaction: discord.Interaction, member: discord.Member = None):
