@@ -275,6 +275,14 @@ def build_prediction_embed(pred: Prediction) -> discord.Embed:
 
     embed.add_field(name="Status", value=status_str, inline=False)
 
+
+    if is_open:
+        embed.add_field(
+            name="​",
+            value=f"[View on Dashboard]({PredictionsDashboardURL}/{pred.prediction_id})",
+            inline=False,
+        )
+
     return embed
 
 
