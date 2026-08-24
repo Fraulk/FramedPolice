@@ -259,7 +259,7 @@ async def syncbets(ctx):
     bot.tree.clear_commands(type=discord.AppCommandType.message, guild=guild)
     await bot.tree.sync(guild=guild)
     await bot.tree.sync()
-    await ctx.send("Betting slash commands synced!")
+    await ctx.send("Prediction slash commands synced!")
 
 @bot.tree.context_menu(name='Add to your second look list')
 async def addSLList(interaction: discord.Interaction, message: discord.Message):
@@ -353,7 +353,7 @@ def in_prediction_channel():
     async def predicate(interaction: discord.Interaction) -> bool:
         if interaction.channel_id != PredictionChannel:
             await interaction.response.send_message(
-                f"Betting commands only work in <#{PredictionChannel}>.", ephemeral=True
+                f"Prediction commands only work in <#{PredictionChannel}>.", ephemeral=True
             )
             return False
         return True
@@ -362,7 +362,7 @@ def in_prediction_channel():
 
 @app_commands.checks.has_role("Founders Edition")
 @in_prediction_channel()
-@bot.tree.command(name="bet_create", description="[MOD] Create a new prediction market bet")
+@bot.tree.command(name="bet_create", description="[MOD] Create a new prediction market")
 @app_commands.describe(
     question="The prediction question, e.g. 'Will Bloodborne PC be announced?'",
     description="Optional extra context or rules",
@@ -425,7 +425,7 @@ async def bet_create(
 
 @app_commands.checks.has_role("Founders Edition")
 @in_prediction_channel()
-@bot.tree.command(name="bet_lock", description="[MOD] Stop voting on a bet early, without picking a winner yet")
+@bot.tree.command(name="bet_lock", description="[MOD] Stop voting on a prediction early, without picking a winner yet")
 @app_commands.describe(bet_number="The bet number (shown as 'Bet #1', 'Bet #2', etc.)")
 async def bet_lock(interaction: discord.Interaction, bet_number: int):
     await interaction.response.defer(ephemeral=True)
@@ -450,7 +450,7 @@ async def bet_lock(interaction: discord.Interaction, bet_number: int):
     db = _require_db()
     await lock_prediction(interaction.client, pred, db)
     await interaction.followup.send(
-        f"Voting locked on Bet #{bet_number}. Use `/bet_close` when you're ready to pick a winner.",
+        f"Voting locked on Prediction #{bet_number}. Use `/bet_close` when you're ready to pick a winner.",
         ephemeral=True,
     )
 
@@ -561,7 +561,7 @@ async def bet_list(interaction: discord.Interaction):
     embed = discord.Embed(title="Active Predictions", color=0x5865F2)
     for pred in open_preds[:10]:  # max 10 in one embed
         embed.add_field(
-            name=f"Bet #{pred.display_id} · {pred.question}",
+            name=f"Prediction #{pred.display_id} · {pred.question}",
             value=(
                 f"{pred.option_a}: **{pred.percent_a()}%** ({pred.votes_a} votes)  "
                 f"{pred.option_b}: **{pred.percent_b()}%** ({pred.votes_b} votes)\n"
@@ -668,13 +668,13 @@ async def my_bets(interaction: discord.Interaction, member: discord.Member = Non
             name="Overall Stats",
             value=(
                 f"Score: {stats['global_score']:+.1f} pts\n"
-                f"Total bets: {stats['total_bets']}\n"
+                f"Total predictions: {stats['total_bets']}\n"
                 f"Correct: {stats['correct_bets']} ({accuracy}%)"
             ),
             inline=False,
         )
     else:
-        embed.add_field(name="Overall Stats", value="No resolved bets yet.", inline=False)
+        embed.add_field(name="Overall Stats", value="No resolved predictions yet.", inline=False)
 
     if bets:
         history = ""
@@ -687,15 +687,15 @@ async def my_bets(interaction: discord.Interaction, member: discord.Member = Non
             else:
                 result = f"{bet['score_awarded']:.1f}pts"
             history += f"• **{bet['question'][:45]}...**\n  → {chosen} — {result}\n"
-        embed.add_field(name="Recent Bets", value=history, inline=False)
+        embed.add_field(name="Recent Predictions", value=history, inline=False)
     else:
-        embed.add_field(name="Recent Bets", value="No bets placed yet.", inline=False)
+        embed.add_field(name="Recent Predictions", value="No predictions placed yet.", inline=False)
 
     await interaction.followup.send(embed=embed, ephemeral=True)
 
 
 @app_commands.checks.has_role("Founders Edition")
-@bot.tree.command(name="bet_export", description="[MOD] Download the betting database as a file")
+@bot.tree.command(name="bet_export", description="[MOD] Download the prediction database as a file")
 async def bet_export(interaction: discord.Interaction):
     if interaction.channel_id != BetModChannel:
         await interaction.response.send_message(
@@ -712,8 +712,8 @@ async def bet_export(interaction: discord.Interaction):
     buffer = io.BytesIO(json.dumps(dump, indent=2).encode("utf-8"))
     size_kb = buffer.getbuffer().nbytes // 1024
     await interaction.followup.send(
-        f"Here's the current betting data (`{size_kb} KB`):",
-        file=discord.File(buffer, filename="betting_export.json"),
+        f"Here's the current prediction data (`{size_kb} KB`):",
+        file=discord.File(buffer, filename="predictions_export.json"),
         ephemeral=True,
     )
 

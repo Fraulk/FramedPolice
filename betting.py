@@ -270,7 +270,7 @@ def build_prediction_embed(pred: Prediction) -> discord.Embed:
     embed.add_field(name="\u200b", value=bar, inline=False)
 
     embed.set_footer(
-        text=f"Bet #{pred.display_id} • Created by {pred.creator_name} • {pred.total_votes} total votes"
+        text=f"Prediction #{pred.display_id} • Created by {pred.creator_name} • {pred.total_votes} total votes"
     )
 
     embed.add_field(name="Status", value=status_str, inline=False)
@@ -444,7 +444,7 @@ async def close_prediction(
         value=f"**{correct_count}** correct • **{wrong_count}** incorrect",
         inline=True,
     )
-    result_embed.set_footer(text=f"Bet #{pred.display_id}")
+    result_embed.set_footer(text=f"Prediction #{pred.display_id}")
 
     return result_embed
 
