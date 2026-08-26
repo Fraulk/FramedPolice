@@ -195,9 +195,9 @@ class Prediction:
         return f"{hours}h {minutes}m"
 
     def calculate_scores(self) -> dict[int, float]:
-        # kinda like Polymarket - correct side splits (losing_pool / total) * 100 pts between them,
-        # wrong side just eats a flat -10. so picking the underdog and being right pays off more,
-        # it's not some crazy exponential curve, just proportional to how many people you beat
+        # still Polymarket-ish - the more people you beat, the more you win - but now the
+        # penalty scales the same way instead of a flat -10, so it's actual zero-sum: whatever
+        # the winners split adds up exactly to what the losers lose, no matter the group size
         if self.winner is None:
             return {}
 
@@ -211,13 +211,9 @@ class Prediction:
 
         for user_id, choice in self.votes.items():
             if choice == self.winner:
-                if winning_pool > 0:
-                    score = round((losing_pool / total) * 100, 1)
-                else:
-                    score = 0.0
-                scores[user_id] = max(score, 1.0)  # at least 1pt for correct
+                scores[user_id] = round((losing_pool / total) * 20, 1)
             else:
-                scores[user_id] = -10.0  # flat penalty for wrong
+                scores[user_id] = round(-(winning_pool / total) * 20, 1)
 
         return scores
 
