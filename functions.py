@@ -33,12 +33,14 @@ usersMessages = []
 botDeletedMessages = set()
 
 class UserMessage:
-    def __init__(self, id, name, time, count, reachedLimit):
+    def __init__(self, id, name, time, count, reachedLimit, messageIds=None):
         self.id = id
         self.name = name
         self.time = time
         self.count = count
         self.reachedLimit = reachedLimit
+        # ids of the shots counted in the current window, so a deleted shot frees its slot
+        self.messageIds = messageIds if messageIds is not None else []
 
 async def checkMessage(message):
     try:
@@ -74,6 +76,8 @@ async def checkMessage(message):
         await log_info(f"Embeds count: {len(embeds)}")
         for msg in usersMessages:
             if msg.id == userId:
+                if not hasattr(msg, 'messageIds'):  # objects pickled before messageIds existed
+                    msg.messageIds = []
                 endTime = msg.time + DELAY
                 remainingTime = DELAY - (time.time() - msg.time)
                 # Mark when next post reaches the limit
@@ -149,15 +153,17 @@ async def checkMessage(message):
                         return
                     else:
                         msg.count = new_count
+                        msg.messageIds.append(message.id)
                 else:
                     msg.time = time.time()
                     msg.count = 1
                     msg.reachedLimit = False
+                    msg.messageIds = [message.id]
                 await log_info(
                     f"UserId:{msg.id} first:{msg.time} count:{msg.count} by:{msg.name}"
                 )
                 return
-        usersMessages.append(UserMessage(userId, message.author.name + "#" + message.author.discriminator, time.time(), 1, False))
+        usersMessages.append(UserMessage(userId, message.author.name + "#" + message.author.discriminator, time.time(), 1, False, [message.id]))
         await log_info(f"UserId:{userId} first:{time.time()} count:1 by:{message.author.name}#{message.author.discriminator}")
     except Exception as e:
         await log_error(f"checkMessage crashed: {e}")

@@ -94,26 +94,24 @@ async def on_message_edit(before, after):
         return
 
 @bot.event
-async def on_message_delete(message):
-    if message.channel.id != SYSChannel:
-        return
-    if len(message.attachments) == 0:
+async def on_raw_message_delete(payload):
+    # raw event fires even when the message isn't in the bot's cache (after a restart or on a busy server),
+    # on_message_delete silently skipped those, so deleted shots kept counting against the limit
+    if payload.channel_id != SYSChannel:
         return
     # if bot deleted this message, don't decrement count
-    if message.id in botDeletedMessages:
-        botDeletedMessages.discard(message.id)
+    if payload.message_id in botDeletedMessages:
+        botDeletedMessages.discard(payload.message_id)
         return
-    userId = message.author.id
     for msg in usersMessages:
-        # if msg.count <= LIMIT: return
-        if msg.id == userId:
-            # msgCreatedAt = datetime.datetime.timestamp(message.created_at)
-            # if msgCreatedAt >= msg.time - (3600 * 2):   # msgCreatedAt is in UTC, but msg.time is in my timezone, so I remove 2 hours to get it to UTC, approximatively
-            msg.count -= 1
-            print('---------------------------------------- Shots from ' + message.author.name + "#" + message.author.discriminator + ' deleted')
+        ids = getattr(msg, 'messageIds', [])
+        # only shots counted in the current window free a slot
+        if payload.message_id in ids:
+            ids.remove(payload.message_id)
+            msg.count = max(msg.count - 1, 0)
+            print(f'---------------------------------------- Shot from {msg.name} deleted, count now {msg.count}')
             await save()
-            # else:
-                # print('---------------------------------------- Older shots from '+ message.author.name + "#" + message.author.discriminator +' deleted')
+            return
 
 @bot.event
 async def on_member_join(member):
